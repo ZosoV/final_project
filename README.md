@@ -6,7 +6,9 @@
 
 Remember keep this TODO list simple. Things that you can achieve
 
-- [ ] End the reading of how to define different MARL problems
+Remember to start keeping notes of what you are learning and writing that could used to write the background information in your thesis.
+
+- [ ] End the reading of how to define different MARL problems (Brief Take Notes)
 - [ ] Read MARL book to understand PRO
 - [ ] Video of policy gradient methods.
 - [ ] Then start reading MARL articles (define later)
