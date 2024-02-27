@@ -8,11 +8,12 @@ Remember keep this TODO list simple. Things that you can achieve
 
 Remember to start keeping notes of what you are learning and writing that could used to write the background information in your thesis.
 
-- [ ] Read bi-simulaiton in this book together with ChatGPT ZOTERO
-- [ ] Read abstraction in reinforcement learning.
+- [x] Read bi-simulaiton in this book together with ChatGPT ZOTERO
+- [ ] Read abstraction in reinforcement learning. Paper chosen
+- [ ] Read paper of the professor, but jumping into the important stuff
 - [ ] Read abstract and important stuff
 - [ ] Read Challenges in off-line reinforcement learning
-- [ ] Read the paper the professor recomended, he is trying me to focus on the idea of getting a minimal model
+- [ ] Read the paper the professor recommended, he is trying me to focus on the idea of getting a minimal model
 - [ ] Read other sources if needed. Read abstract and important stuff
 - [ ] Decide what to do? This or maybe something more experimental. Something experimental with a great background based in worth it.
  
