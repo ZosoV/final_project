@@ -52,3 +52,9 @@ In this coupled system:
 The main goal here is to analyze the properties of $X_1$ and $X_2$ in a unified way. For instance, in studying convergence, dependence, or to provide a probabilistic bound on their behavior, coupling allows us to mathematically reason about these properties more effectively.
 
 By doing so, coupling provides a powerful method to compare random variables and to analyze their stochastic relationship in a controlled manner that respects their inherent probabilistic laws.
+
+### Two ways of Abstraction
+
+There are two primary types of state abstraction: aggregation and feature selection.
+
+Aggregation focuses on grouping together similar states, and feature selection identifies and focuses on only the most relevant aspects or features of the state, discarding irrelevant details.
