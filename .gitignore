@@ -9,6 +9,7 @@ __pycache__/
 # custom ignores
 models/
 runs/
+results/
 
 # Distribution / packaging
 .Python
