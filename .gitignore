@@ -10,6 +10,8 @@ __pycache__/
 models/
 runs/
 results/
+outputs/
+training_loop/
 
 # Distribution / packaging
 .Python

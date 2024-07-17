@@ -202,7 +202,8 @@ def main(cfg: "DictConfig"):  # noqa: F821
         )
 
         # Get and log evaluation rewards and eval time
-        with torch.no_grad(), set_exploration_type(ExplorationType.DETERMINISTIC):
+        # NOTE: As I'm using only the model and not the model_explore that will deterministic I think
+        with torch.no_grad(): #, set_exploration_type(ExplorationType.DETERMINISTIC):
 
             # NOTE: Cehck how we are the frames here because it seems that I am dividing 
             # 10 for 50000
