@@ -12,6 +12,9 @@ runs/
 results/
 outputs/
 training_loop/
+dqn/outputs/
+.hydra/
+wandb/
 
 # Distribution / packaging
 .Python
