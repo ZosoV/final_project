@@ -17,11 +17,12 @@ from torchrl.record import VideoRecorder
 # --------------------------------------------------------------------
 
 
-def make_env(env_name="CartPole-v1", device="cpu", from_pixels=False):
+def make_env(env_name="CartPole-v1", device="cpu", seed = 0, from_pixels=False):
     env = GymEnv(env_name, device=device, from_pixels=from_pixels, pixels_only=False)
     env = TransformedEnv(env)
     env.append_transform(RewardSum())
     env.append_transform(StepCounter())
+    env.set_seed(seed)
     return env
 
 
@@ -92,3 +93,18 @@ def eval_model(actor, test_env, num_episodes=3):
 def dump_video(module):
     if isinstance(module, VideoRecorder):
         module.dump()
+
+def print_hyperparameters(cfg):
+    keys = ["env",
+            "collector",
+            "buffer",
+            "optim",
+            "loss"]
+    
+    for key in keys:
+        if key in cfg:
+            print(f"{key}:")
+            for k, v in cfg[key].items():
+                print(f"  {k}: {v}")
+
+

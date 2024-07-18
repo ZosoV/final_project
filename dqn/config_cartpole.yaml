@@ -2,12 +2,14 @@
 device: null
 
 # Environment
+# SEEDS: [118398, 676190, 786456, 171936, 887739, 919409, 711872, 442081, 189061, 117840]
 env:
   env_name: CartPole-v1
+  seed: 118398
 
 # collector
 collector:
-  total_frames: 250_100
+  total_frames: 350_100
   frames_per_batch: 10
   eps_start: 1.0
   eps_end: 0.05
@@ -23,7 +25,7 @@ buffer:
 logger:
   backend: wandb
   project_name: torchrl_example_dqn
-  group_name: null
+  group_name: DQN_CartPole_v1_ER
   exp_name: DQN
   test_interval: 50_000
   num_test_episodes: 5

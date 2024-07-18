@@ -3,13 +3,17 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import time
-from datetime import timedelta
+import datetime
 
 import hydra
 import torch.nn
 import torch.optim
 import tqdm
 import wandb
+
+import random
+import numpy as np
+import torch
 
 from tensordict.nn import TensorDictSequential
 # from torchrl._utils import logger as torchrl_logger
@@ -20,11 +24,20 @@ from torchrl.modules import EGreedyModule
 from torchrl.objectives import DQNLoss, HardUpdate
 from torchrl.record import VideoRecorder
 # from torchrl.record.loggers import generate_exp_name, get_logger
-from utils_cartpole import eval_model, make_dqn_model, make_env
+from utils_cartpole import eval_model, make_dqn_model, make_env, print_hyperparameters
 
 
-@hydra.main(config_path="", config_name="config_cartpole", version_base="1.1")
-def main(cfg: "DictConfig"):  # noqa: F821
+
+@hydra.main(config_path=".", config_name="config_cartpole", version_base=None)
+def main(cfg: "DictConfig"):
+
+    # Set seeds for reproducibility
+    seed = cfg.env.seed
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
     device = cfg.device
     if device in ("", None):
@@ -34,12 +47,16 @@ def main(cfg: "DictConfig"):  # noqa: F821
             device = "cpu"
     device = torch.device(device)
 
+    # Get current date and time
+    current_date = datetime.datetime.now()
+    date_str = current_date.strftime("%Y_%m_%d-%H_%M_%S")  # Includes date and time
+
     # Initialize wandb
     wandb.init(
         project=cfg.logger.project_name,
         config=dict(cfg),
         group=cfg.logger.group_name,
-        name=f"DQN_CartPole_{cfg.env.env_name}"
+        name=f"DQN_{cfg.env.env_name}_{date_str}"
     )
 
     # Make the components
@@ -71,7 +88,7 @@ def main(cfg: "DictConfig"):  # noqa: F821
     # NOTE: init_random_frames: Number of frames 
     # for which the policy is ignored before it is called.
     collector = SyncDataCollector(
-        create_env_fn=make_env(cfg.env.env_name, "cpu"),
+        create_env_fn=make_env(cfg.env.env_name, "cpu", cfg.env.seed),
         policy=model_explore,
         frames_per_batch=cfg.collector.frames_per_batch,
         total_frames=cfg.collector.total_frames,
@@ -123,7 +140,7 @@ def main(cfg: "DictConfig"):  # noqa: F821
     #     )
 
     # Create the test environment
-    test_env = make_env(cfg.env.env_name, "cpu", from_pixels=cfg.logger.video)
+    test_env = make_env(cfg.env.env_name, "cpu", from_pixels=cfg.logger.video, seed=cfg.env.seed)
     if cfg.logger.video:
         test_env.insert_transform(
             0,
@@ -134,6 +151,7 @@ def main(cfg: "DictConfig"):  # noqa: F821
 
     # Main loop
     collected_frames = 0
+    total_episodes = 0
     start_time = time.time()
     num_updates = cfg.loss.num_updates
     batch_size = cfg.buffer.batch_size
@@ -173,6 +191,9 @@ def main(cfg: "DictConfig"):  # noqa: F821
         replay_buffer.extend(data)
         collected_frames += current_frames
         greedy_module.step(current_frames)
+
+        # Get the number of episodes
+        total_episodes += data["next", "done"].sum()
 
         # Get and log training rewards and episode lengths
         # Collect the episode rewards and lengths in average over the
@@ -237,11 +258,13 @@ def main(cfg: "DictConfig"):  # noqa: F821
         # NOTE: As I'm using only the model and not the model_explore that will deterministic I think
         with torch.no_grad(): #, set_exploration_type(ExplorationType.DETERMINISTIC):
 
-            # NOTE: Check how we are the frames here because it seems that I am dividing 
+            # NOTE: Check how we are using the frames here because it seems that I am dividing 
             # 10 for 50000
             prev_test_frame = ((i - 1) * frames_per_batch) // test_interval
             cur_test_frame = (i * frames_per_batch) // test_interval
             final = current_frames >= collector.total_frames
+
+            # compara prev_test_frame < cur_test_frame is the same as current_frames % test_interval == 0
             if (i >= 1 and (prev_test_frame < cur_test_frame)) or final:
                 model.eval()
                 eval_start = time.time()
@@ -267,9 +290,11 @@ def main(cfg: "DictConfig"):  # noqa: F821
     collector.shutdown()
     end_time = time.time()
     execution_time = end_time - start_time
-    formatted_time = str(timedelta(seconds=int(execution_time)))
-    print(f"Collected Frames: {collected_frames}")
+    formatted_time = str(datetime.timedelta(seconds=int(execution_time)))
+    print(f"Collected Frames: {collected_frames}, Total Episodes: {total_episodes}")
     print(f"Training took {formatted_time} (HH:MM:SS) to finish")
+    print("Hyperparameters used:")
+    print_hyperparameters(cfg)
 
     # TODO: Print the hyperparameters used
     # wandb.finish()
