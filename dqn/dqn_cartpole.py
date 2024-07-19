@@ -23,12 +23,14 @@ from torchrl.envs import ExplorationType, set_exploration_type
 from torchrl.modules import EGreedyModule
 from torchrl.objectives import DQNLoss, HardUpdate
 from torchrl.record import VideoRecorder
+from torchrl.data.replay_buffers.samplers import RandomSampler, PrioritizedSampler
+
 # from torchrl.record.loggers import generate_exp_name, get_logger
 from utils_cartpole import eval_model, make_dqn_model, make_env, print_hyperparameters
 
 
 
-@hydra.main(config_path=".", config_name="config_cartpole", version_base=None)
+@hydra.main(config_path=".", config_name="config_cartpole_ER", version_base=None)
 def main(cfg: "DictConfig"):
 
     # Set seeds for reproducibility
@@ -61,7 +63,7 @@ def main(cfg: "DictConfig"):
 
     # Make the components
     # Policy
-    model = make_dqn_model(cfg.env.env_name)
+    model = make_dqn_model(cfg.env.env_name, cfg.policy)
 
 
     # NOTE: annealing_num_steps: number of steps 
@@ -99,6 +101,15 @@ def main(cfg: "DictConfig"):
     )
 
     # Create the replay buffer
+    if cfg.buffer.prioritized_replay:
+        print("Using Prioritized Replay Buffer")
+        sampler = PrioritizedSampler(
+            max_capacity=cfg.buffer.buffer_size, 
+            alpha=cfg.buffer.alpha, 
+            beta=cfg.buffer.beta)
+    else:
+        sampler = RandomSampler()
+        
     replay_buffer = TensorDictReplayBuffer(
         pin_memory=False,
         prefetch=10,
@@ -107,8 +118,9 @@ def main(cfg: "DictConfig"):
             device="cpu",
         ),
         batch_size=cfg.buffer.batch_size,
+        sampler = sampler
     )
-
+    
     # Create the loss module
     loss_module = DQNLoss(
         value_network=model,
@@ -235,6 +247,10 @@ def main(cfg: "DictConfig"):
             optimizer.zero_grad()
             q_loss.backward()
             optimizer.step()
+
+            # Update the priorities
+            if cfg.buffer.prioritized_replay:
+                replay_buffer.update_priority(index=sampled_tensordict['index'], priority = sampled_tensordict['td_error'])
 
             # NOTE: This is only one step (after n-updated steps defined before)
             # the target will update

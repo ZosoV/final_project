@@ -31,7 +31,7 @@ def make_env(env_name="CartPole-v1", device="cpu", seed = 0, from_pixels=False):
 # --------------------------------------------------------------------
 
 
-def make_dqn_modules(proof_environment):
+def make_dqn_modules(proof_environment, policy_cfg):
 
     # Define input shape
     input_shape = proof_environment.observation_spec["observation"].shape
@@ -44,12 +44,14 @@ def make_dqn_modules(proof_environment):
     action_spec = env_specs["input_spec", "full_action_spec", "action"]
 
     # Define Q-Value Module
-    mlp = MLP(
-        in_features=input_shape[-1],
-        activation_class=torch.nn.ReLU,
-        out_features=num_outputs,
-        num_cells=[120, 84],
-    )
+    if policy_cfg.type == "MLP":
+        activation_class = getattr(torch.nn, policy_cfg.activation)
+        mlp = MLP(
+            in_features=input_shape[-1],
+            activation_class=activation_class,
+            out_features=num_outputs,
+            num_cells=policy_cfg.layers,
+        )
 
     # NOTE: Do I need CompositeSpec here?
     # I think I only need proof_environment.action_spec
@@ -61,9 +63,9 @@ def make_dqn_modules(proof_environment):
     return qvalue_module
 
 
-def make_dqn_model(env_name):
+def make_dqn_model(env_name, policy_cfg):
     proof_environment = make_env(env_name, device="cpu")
-    qvalue_module = make_dqn_modules(proof_environment)
+    qvalue_module = make_dqn_modules(proof_environment, policy_cfg)
     del proof_environment
     return qvalue_module
 

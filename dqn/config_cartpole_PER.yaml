@@ -26,7 +26,7 @@ policy:
 buffer:
   buffer_size: 10_000
   batch_size: 128
-  prioritized_replay: False
+  prioritized_replay: True
   alpha: 0.7
   beta: 0.5
 
