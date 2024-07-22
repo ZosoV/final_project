@@ -2,4 +2,3 @@
 outputs/
 wandb/
 multirun/
-__pycache__/

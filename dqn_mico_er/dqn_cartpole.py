@@ -276,8 +276,9 @@ def main(cfg: "DictConfig"):
                 / frames_per_batch,
                 "train/q_loss": q_losses.mean().item(),
                 "train/epsilon": greedy_module.eps,
-                "train/sampling_time": sampling_time,
-                "train/training_time": training_time,
+                "train/episode_per_chunk": data["next", "done"].sum().item(),
+                # "train/sampling_time": sampling_time,
+                # "train/training_time": training_time,
             }
         )
 

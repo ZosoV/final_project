@@ -33,7 +33,7 @@ buffer:
 logger:
   backend: wandb
   project_name: BER_final_project
-  group_name: DQN_CartPole_v1_ER
+  group_name: null
   exp_name: DQN
   test_interval: 10_000  # More frequent testing
   num_test_episodes: 10  # More test episodes for better evaluation
