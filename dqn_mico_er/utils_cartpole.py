@@ -10,7 +10,7 @@ from torchrl.envs import RewardSum, StepCounter, TransformedEnv
 from torchrl.envs.libs.gym import GymEnv
 from torchrl.modules import MLP, QValueActor
 from torchrl.record import VideoRecorder
-
+from tensordict.nn import TensorDictModule
 
 # ====================================================================
 # Environment utils
@@ -30,6 +30,46 @@ def make_env(env_name="CartPole-v1", device="cpu", seed = 0, from_pixels=False):
 # Model utils
 # --------------------------------------------------------------------
 
+class MICOMLPNetwork(torch.nn.Module):
+    def __init__(self,
+                 in_features,
+                 activation_class, 
+                 encoder_out_features,
+                 mlp_out_features,
+                 encoder_num_cells = None,
+                 mlp_num_cells = None):
+        super(MICOMLPNetwork, self).__init__()
+
+        self.activation = activation_class()
+
+        if encoder_num_cells is None:
+            encoder_num_cells = []
+        layers_sizes = [in_features] + encoder_num_cells + [encoder_out_features]
+
+        self.layers = torch.nn.ModuleList()
+        for i in range(len(layers_sizes) - 1):
+            self.layers.append(torch.nn.Linear(layers_sizes[i], layers_sizes[i+1]))
+
+        if mlp_num_cells is None:
+            mlp_num_cells = []
+
+        layers_sizes = [encoder_out_features] + mlp_num_cells + [mlp_out_features.item()]
+
+        self.mlp_layers = torch.nn.ModuleList()
+        for i in range(len(layers_sizes) - 1):
+            self.mlp_layers.append(torch.nn.Linear(layers_sizes[i], layers_sizes[i+1]))
+        
+    
+    def forward(self, x):
+        for i in range(len(self.layers)):
+            x = self.activation(self.layers[i](x))
+
+        representation = x
+
+        for i in range(len(self.mlp_layers)-1):
+            x = self.activation(self.mlp_layers[i](x))
+
+        return self.mlp_layers[-1](x), representation
 
 def make_dqn_modules(proof_environment, policy_cfg):
 
@@ -43,23 +83,40 @@ def make_dqn_modules(proof_environment, policy_cfg):
     num_outputs = env_specs["input_spec", "full_action_spec", "action"].space.n
     action_spec = env_specs["input_spec", "full_action_spec", "action"]
 
-    # Define Q-Value Module
+    # Define Q-Value Module and Representations (for MICO)
     if policy_cfg.type == "MLP":
         activation_class = getattr(torch.nn, policy_cfg.activation)
-        mlp = MLP(
+        module = MLP(
             in_features=input_shape[-1],
             activation_class=activation_class,
             out_features=num_outputs,
             num_cells=policy_cfg.layers,
         )
 
+    if policy_cfg.type == "MLP_encoder":
+        activation_class = getattr(torch.nn, policy_cfg.activation)
+        
+        module = MICOMLPNetwork(
+            in_features=input_shape[-1],
+            activation_class=activation_class,
+            encoder_num_cells=policy_cfg.encoder.layers,
+            encoder_out_features=policy_cfg.encoder.out_features,
+            mlp_num_cells=policy_cfg.network.layers,
+            mlp_out_features=num_outputs,
+        )
+
+        module = TensorDictModule(module,
+                in_keys=["observation"], 
+                out_keys=["action_value", "representation"])
+
     # NOTE: Do I need CompositeSpec here?
     # I think I only need proof_environment.action_spec
     qvalue_module = QValueActor(
-        module=mlp,
-        spec=CompositeSpec(action=action_spec), 
+        module=module,
+        spec=CompositeSpec(action=action_spec),
         in_keys=["observation"],
     )
+
     return qvalue_module
 
 

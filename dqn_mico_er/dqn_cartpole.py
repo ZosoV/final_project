@@ -35,6 +35,9 @@ from utils_cartpole import eval_model, make_dqn_model, make_env, print_hyperpara
 # [ ] Send everything to the gpu only for this example (I could have faster executions)
 # I am only using 143MB from 8GB of GPU memory
 # [ ] Check how smoothing works in wandb and check if there is another way to calculate that expected reward
+# For the implementation of the replay review this tutorial
+# things about the collector and the replay buffer
+# https://pytorch.org/rl/stable/tutorials/coding_ddpg.html#coding-ddpg
 
 @hydra.main(config_path=".", config_name="config_cartpole", version_base=None)
 def main(cfg: "DictConfig"):
@@ -47,6 +50,11 @@ def main(cfg: "DictConfig"):
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+        # NOTE: This step is needed to have reproducibility
+        # But it reduces a little bit the performance
+        # if I don't need reproducibility I could comment this line
+        torch.backends.cudnn.benchmark = False
 
     # Print the current seed and group
     print(f"Running with Seed: {seed}")
@@ -69,7 +77,7 @@ def main(cfg: "DictConfig"):
         project=cfg.logger.project_name,
         config=dict(cfg),
         group=cfg.logger.group_name,
-        name=f"DQN_{cfg.env.env_name}_{date_str}"
+        name=f"{cfg.exp_name}_{cfg.env.env_name}_{date_str}"
     )
 
     # Make the components
@@ -234,7 +242,7 @@ def main(cfg: "DictConfig"):
             log_info.update(
                 {
                     "train/episode_reward": episode_reward_mean,
-                    "train/episode_length": episode_length_mean,
+                    # "train/episode_length": episode_length_mean,
                 }
             )
 

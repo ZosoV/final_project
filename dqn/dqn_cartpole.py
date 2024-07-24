@@ -47,7 +47,11 @@ def main(cfg: "DictConfig"):
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
-
+        # NOTE: This step is needed to have reproducibility
+        # But it reduces a little bit the performance
+        # if I don't need reproducibility I could comment this line
+        torch.backends.cudnn.benchmark = False
+        
     # Print the current seed and group
     print(f"Running with Seed: {seed}")
     print(f"Group: {cfg.logger.group_name}")
@@ -69,7 +73,7 @@ def main(cfg: "DictConfig"):
         project=cfg.logger.project_name,
         config=dict(cfg),
         group=cfg.logger.group_name,
-        name=f"DQN_{cfg.env.env_name}_{date_str}"
+        name=f"{cfg.exp_name}_{cfg.env.env_name}_{date_str}"
     )
 
     # Make the components

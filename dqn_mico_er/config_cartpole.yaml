@@ -11,23 +11,27 @@ env:
 
 # collector
 collector:
-  total_frames: 10000
+  total_frames: 250_100
   frames_per_batch: 10
   eps_start: 1.0
-  eps_end: 0.01
-  annealing_frames: 1_500
-  init_random_frames: 10
+  eps_end: 0.05
+  annealing_frames: 150_000
+  init_random_frames: 10_000
 
 # policy
 policy:
-  type: "MLP"  # Example type, adjust based on your architecture (e.g., CNN, RNN)
-  layers: [128, 128]  # Number of units in each layer
+  type: "MLP_encoder"  # Example type, adjust based on your architecture (e.g., CNN, RNN)
+  encoder:
+    layers: [120, 84]
+    out_features: 2
+  network:
+    layers: [84]
   activation: "ReLU"  # Activation function used in the layers
 
 # buffer
 buffer:
-  buffer_size: 10000 # Check the paper and the effect of the buffer size to have an intuition
-  batch_size: 32
+  buffer_size: 10_000 # Check the paper and the effect of the buffer size to have an intuition
+  batch_size: 128
   prioritized_replay: False
   alpha: 0.7
   beta: 0.4
@@ -35,20 +39,19 @@ buffer:
 # logger
 logger:
   backend: wandb
-  project_name: BisimulationPER
+  project_name: torchrl_example_dqn
   group_name: null
-  exp_name: DQN
-  test_interval: 500
+  test_interval: 25_000
   num_test_episodes: 5
   video: False
 
 # Optim
 optim:
-  lr: 0.001 # 2.5e-4
+  lr: 0.00015 #2.5e-4
   max_grad_norm: 10
 
 # loss
 loss:
   gamma: 0.99
-  hard_update_freq: 500
+  hard_update_freq: 50
   num_updates: 1
