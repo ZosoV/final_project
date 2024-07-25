@@ -27,6 +27,7 @@ from torchrl.data.replay_buffers.samplers import RandomSampler, PrioritizedSampl
 
 # from torchrl.record.loggers import generate_exp_name, get_logger
 from utils_cartpole import eval_model, make_dqn_model, make_env, print_hyperparameters
+from custom_modules import MICODQNLoss
 
 # TODO: TODOS:
 # [ ] Check the parameters of the replay buffer what is happening in the iteration 210000
@@ -56,10 +57,6 @@ def main(cfg: "DictConfig"):
         # if I don't need reproducibility I could comment this line
         torch.backends.cudnn.benchmark = False
 
-    # Print the current seed and group
-    print(f"Running with Seed: {seed}")
-    print(f"Group: {cfg.logger.group_name}")
-
     device = cfg.device
     if device in ("", None):
         if torch.cuda.is_available():
@@ -67,6 +64,10 @@ def main(cfg: "DictConfig"):
         else:
             device = "cpu"
     device = torch.device(device)
+
+    # Print the current seed and group
+    print(f"Running with Seed: {seed} on Device: {device}")
+    print(f"Group: {cfg.logger.group_name}")
 
     # Get current date and time
     current_date = datetime.datetime.now()
@@ -141,11 +142,17 @@ def main(cfg: "DictConfig"):
     )
     
     # Create the loss module
-    loss_module = DQNLoss(
+    loss_module = MICODQNLoss(
         value_network=model,
         loss_function="l2", 
         delay_value=True, # delay_value=True means we will use a target network
     )
+    # loss_module = DQNLoss(
+    #     value_network=model,
+    #     gamma=cfg.loss.gamma,
+    #     target_update_interval=cfg.loss.target_update_interval,
+    #     delay_value=True,
+    # )
     loss_module.make_value_estimator(gamma=cfg.loss.gamma) # only to change the gamma value
     loss_module = loss_module.to(device)
     target_net_updater = HardUpdate(

@@ -90,7 +90,7 @@ def make_dqn_modules(proof_environment, policy_cfg):
             in_features=input_shape[-1],
             activation_class=activation_class,
             out_features=num_outputs,
-            num_cells=policy_cfg.layers,
+            num_cells=policy_cfg.network.layers,
         )
 
     if policy_cfg.type == "MLP_encoder":
