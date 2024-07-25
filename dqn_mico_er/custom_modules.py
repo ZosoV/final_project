@@ -355,7 +355,7 @@ class MICODQNLoss(LossModule):
             inplace=True,
         )
         td_loss = distance_loss(pred_val_index, target_value, self.loss_function)
-        td_loss = _reduce(loss, reduction=self.reduction)
+        td_loss = _reduce(td_loss, reduction=self.reduction)
 
         # mico_loss = distance_loss(pred_dist, target_dist, self.loss_function)
         # mico_loss = _reduce(mico_loss, reduction=self.reduction)
