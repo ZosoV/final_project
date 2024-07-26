@@ -23,7 +23,7 @@ from torchrl.envs import ExplorationType, set_exploration_type
 from torchrl.modules import EGreedyModule
 from torchrl.objectives import DQNLoss, HardUpdate
 from torchrl.record import VideoRecorder
-from torchrl.data.replay_buffers.samplers import RandomSampler, PrioritizedSampler
+from torchrl.data.replay_buffers.samplers import RandomSampler, PrioritizedSampler, PrioritizedSliceSampler, SliceSampler
 
 # from torchrl.record.loggers import generate_exp_name, get_logger
 from utils_cartpole import eval_model, make_dqn_model, make_env, print_hyperparameters
@@ -123,12 +123,16 @@ def main(cfg: "DictConfig"):
     # Create the replay buffer
     if cfg.buffer.prioritized_replay:
         print("Using Prioritized Replay Buffer")
-        sampler = PrioritizedSampler(
+        sampler = PrioritizedSliceSampler(
             max_capacity=cfg.buffer.buffer_size, 
             alpha=cfg.buffer.alpha, 
-            beta=cfg.buffer.beta)
+            beta=cfg.buffer.beta, 
+            traj_key=("collector","traj_ids"), 
+            slice_len=2)
     else:
-        sampler = RandomSampler()
+        sampler = SliceSampler(
+            traj_key=("collector","traj_ids"), 
+            slice_len=2)
         
     replay_buffer = TensorDictReplayBuffer(
         pin_memory=False,
@@ -146,6 +150,9 @@ def main(cfg: "DictConfig"):
         value_network=model,
         loss_function="l2", 
         delay_value=True, # delay_value=True means we will use a target network
+        mico_gamma=cfg.loss.mico_gamma,
+        mico_beta=cfg.loss.mico_beta,
+        mico_weight=cfg.loss.mico_weight,
     )
     # loss_module = DQNLoss(
     #     value_network=model,
@@ -200,6 +207,8 @@ def main(cfg: "DictConfig"):
     init_random_frames = cfg.collector.init_random_frames
     sampling_start = time.time()
     q_losses = torch.zeros(num_updates, device=device)
+    mico_losses = torch.zeros(num_updates, device=device)
+    total_losses = torch.zeros(num_updates, device=device)
 
 
     # NOTE: IMPORTANT: collectors allows me to collect transitions in a different way
@@ -268,8 +277,8 @@ def main(cfg: "DictConfig"):
             sampled_tensordict = sampled_tensordict.to(device)
 
             # Also the loss module will use the current and target model to get the q-values
-            loss_td = loss_module(sampled_tensordict)
-            q_loss = loss_td["loss"]
+            loss = loss_module(sampled_tensordict)
+            q_loss = loss["loss"]
             optimizer.zero_grad()
             q_loss.backward()
             optimizer.step()
@@ -281,7 +290,9 @@ def main(cfg: "DictConfig"):
             # NOTE: This is only one step (after n-updated steps defined before)
             # the target will update
             target_net_updater.step()
-            q_losses[j].copy_(q_loss.detach())
+            q_losses[j].copy_(loss["td_loss"].detach())
+            mico_losses[j].copy_(loss["mico_loss"].detach())
+            total_losses[j].copy_(loss["loss"].detach())
         training_time = time.time() - training_start
 
         # Get and log q-values, loss, epsilon, sampling time and training time
@@ -290,12 +301,25 @@ def main(cfg: "DictConfig"):
                 "train/q_values": (data["action_value"] * data["action"]).sum().item()
                 / frames_per_batch,
                 "train/q_loss": q_losses.mean().item(),
+                "train/mico_loss": mico_losses.mean().item(),
+                "train/total_loss": total_losses.mean().item(),
                 "train/epsilon": greedy_module.eps,
                 "train/episode_per_chunk": data["next", "done"].sum().item(),
                 # "train/sampling_time": sampling_time,
                 # "train/training_time": training_time,
             }
         )
+
+        # Print the maximum gradient and the maximum weight
+        # for name, param in model.named_parameters():
+        #     log_info.update(
+
+        # Log weight distributions after the optimization step
+        # for name, param in model.named_parameters():
+        #     log_info.update({
+        #         f"weights/{name}": wandb.Histogram(param.data.cpu().numpy()),
+        #         f"gradients/{name}": wandb.Histogram(param.grad.data.cpu().numpy())
+        #     })
 
         # Get and log evaluation rewards and eval time
         # NOTE: As I'm using only the model and not the model_explore that will deterministic I think

@@ -20,12 +20,12 @@ collector:
 
 # policy
 policy:
-  type: "MLP"  # Example type, adjust based on your architecture (e.g., CNN, RNN)
+  type: "MLP_encoder"  # Example type, adjust based on your architecture (e.g., CNN, RNN)
   encoder:
     layers: [120, 84]
     out_features: 2
   network:
-    layers: [120, 84]
+    layers: [120, 84] # [10]
   activation: "ReLU"  # Activation function used in the layers
 
 # buffer
@@ -55,3 +55,6 @@ loss:
   gamma: 0.99
   hard_update_freq: 50
   num_updates: 1
+  mico_weight: 0.01 #0.5
+  mico_beta: 0.1
+  mico_gamma: 0.99

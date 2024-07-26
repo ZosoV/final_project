@@ -40,6 +40,9 @@ class MICOMLPNetwork(torch.nn.Module):
                  mlp_num_cells = None):
         super(MICOMLPNetwork, self).__init__()
 
+        # TODO: Intitialize the network with 
+        # xavier_uniform initialization
+
         self.activation = activation_class()
 
         if encoder_num_cells is None:
@@ -165,5 +168,3 @@ def print_hyperparameters(cfg):
             print(f"{key}:")
             for k, v in cfg[key].items():
                 print(f"  {k}: {v}")
-
-

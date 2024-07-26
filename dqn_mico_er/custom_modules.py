@@ -26,8 +26,13 @@ from torchrl.objectives.utils import (
     distance_loss,
     ValueEstimators,
 )
+from torch.nn.functional import huber_loss
 from torchrl.objectives.value import TDLambdaEstimator
 from torchrl.objectives.value.advantages import TD0Estimator, TD1Estimator
+
+# import metric_utils
+from . import metric_utils
+
 
 class MICODQNLoss(LossModule):
     """The DQN Loss class.
@@ -172,10 +177,14 @@ class MICODQNLoss(LossModule):
         action_space: Union[str, TensorSpec] = None,
         priority_key: str = None,
         reduction: str = None,
+        mico_weight: float = 0.5,
+        mico_gamma: float = 0.99,
+        mico_beta: float = 0.1
     ) -> None:
         if reduction is None:
             reduction = "mean"
         super().__init__()
+
         self._in_keys = None
         if double_dqn and not delay_value:
             raise ValueError("double_dqn=True requires delay_value=True.")
@@ -219,8 +228,15 @@ class MICODQNLoss(LossModule):
             action_space = "one-hot"
         self.action_space = _find_action_space(action_space)
         self.reduction = reduction
+
+        self.mico_weight = mico_weight
+        self.mico_gamma = mico_gamma
+        self.mico_beta = mico_beta
+        
         if gamma is not None:
             raise TypeError(_GAMMA_LMBDA_DEPREC_ERROR)
+        
+
 
     def _forward_value_estimator_keys(self, **kwargs) -> None:
         if self._value_estimator is not None:
@@ -299,12 +315,15 @@ class MICODQNLoss(LossModule):
             a tensor containing the DQN loss.
 
         """
-        td_copy = tensordict.clone(False)
+        # TODO: This will help us to debug the code, but it is better to
+        # inherit from QLoss and only update this funciton accordingly, instead of
+        # writing the whole class again.
+        td_online_copy = tensordict.clone(False)
         with self.value_network_params.to_module(self.value_network):
-            self.value_network(td_copy)
+            self.value_network(td_online_copy)
 
         action = tensordict.get(self.tensor_keys.action)
-        pred_val = td_copy.get(self.tensor_keys.action_value)
+        pred_val = td_online_copy.get(self.tensor_keys.action_value)
 
         if self.action_space == "categorical":
             if action.ndim != pred_val.ndim:
@@ -316,8 +335,8 @@ class MICODQNLoss(LossModule):
             pred_val_index = (pred_val * action).sum(-1)
 
         if self.double_dqn:
-            step_td = step_mdp(td_copy, keep_other=False)
-            step_td_copy = step_td.clone(False)
+            step_td = step_mdp(td_online_copy, keep_other=False)
+            step_td_online_copy = step_td.clone(False)
             # Use online network to compute the action
             with self.value_network_params.data.to_module(self.value_network):
                 self.value_network(step_td)
@@ -325,8 +344,8 @@ class MICODQNLoss(LossModule):
 
             # Use target network to compute the values
             with self.target_value_network_params.to_module(self.value_network):
-                self.value_network(step_td_copy)
-                next_pred_val = step_td_copy.get(self.tensor_keys.action_value)
+                self.value_network(step_td_online_copy)
+                next_pred_val = step_td_online_copy.get(self.tensor_keys.action_value)
 
             if self.action_space == "categorical":
                 if next_action.ndim != next_pred_val.ndim:
@@ -337,11 +356,47 @@ class MICODQNLoss(LossModule):
                 next_value = (next_pred_val * next_action).sum(-1, keepdim=True)
         else:
             next_value = None
+
         target_value = self.value_estimator.value_estimate(
-            td_copy,
+            td_online_copy,
             target_params=self.target_value_network_params,
             next_value=next_value,
         ).squeeze(-1)
+
+        ## Metric calculation
+
+        # NOTE: Take only the even rows to only consider the current state not the next state
+        representations = td_online_copy['representation'][0::2]
+
+        # NOTE: In the code implementation, the author decided to compare the representations of 
+        # the current states above vs all the representation of the current state but evaluated 
+        # in the target_network.
+
+        # Additionally, the next states are also evaluated in the target network. Then, we are gonna
+        # pass the observations but now using the target network to get these representations
+
+        td_target_copy = tensordict.clone(False)
+        with self.target_value_network_params.to_module(self.value_network):
+            self.value_network(td_target_copy)
+            target_r = td_target_copy['representation'][0::2]
+            target_next_r = td_target_copy['representation'][1::2]
+
+        # NOTE: the rewards are gotten from the next keys of the current states (even rows)
+        rewards = td_online_copy['next','reward'][0::2]
+
+        online_dist = metric_utils.representation_distances(
+        representations, target_r, self.mico_beta)
+
+        # NOTE: Check the gradients requirement for the target distances OJO
+        target_dist = metric_utils.target_distances(
+            target_next_r, rewards, self.mico_gamma)
+        
+        # TODO: check if I need to use the vmap, if not use the other that
+        # the library proposes
+        # TODO: check what is hubber loss hahaha =D
+        # mico_loss = torch.mean(torch.vmap(huber_loss)(online_dist,
+        #                                                 target_dist))
+        mico_loss = torch.mean(huber_loss(online_dist, target_dist))
 
         with torch.no_grad():
             priority_tensor = (pred_val_index - target_value).pow(2)
@@ -357,13 +412,15 @@ class MICODQNLoss(LossModule):
         td_loss = distance_loss(pred_val_index, target_value, self.loss_function)
         td_loss = _reduce(td_loss, reduction=self.reduction)
 
+        loss = ((1. - self.mico_weight) * td_loss + self.mico_weight * mico_loss)    
+
         # mico_loss = distance_loss(pred_dist, target_dist, self.loss_function)
         # mico_loss = _reduce(mico_loss, reduction=self.reduction)
 
         # loss = self.mu * mico_loss + (1 - self.mu) * td_loss
 
-        # td_out = TensorDict({"loss": loss, "td_loss": td_loss, "mico_loss": mico_loss}, [])
-        td_out = TensorDict({"loss": td_loss}, [])
+        td_out = TensorDict({"loss": loss, "td_loss": td_loss, "mico_loss": mico_loss}, [])
+        # td_out = TensorDict({"loss": loss}, [])
 
         # TODO: Try frist the td loss alone
         return td_out
