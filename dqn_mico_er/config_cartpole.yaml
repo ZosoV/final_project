@@ -24,8 +24,8 @@ policy:
   encoder:
     layers: [120, 84]
     out_features: 2
-  network:
-    layers: [120, 84] # [10]
+  q_net:
+    layers: [84, 48] # [10] # TODO: check this configuration and the LR
   activation: "ReLU"  # Activation function used in the layers
 
 # buffer
@@ -47,7 +47,7 @@ logger:
 
 # Optim
 optim:
-  lr: 0.00015 #2.5e-4
+  lr: 0.000002 #2.5e-4
   max_grad_norm: 10
 
 # loss

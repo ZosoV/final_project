@@ -30,8 +30,8 @@ from torch.nn.functional import huber_loss
 from torchrl.objectives.value import TDLambdaEstimator
 from torchrl.objectives.value.advantages import TD0Estimator, TD1Estimator
 
-# import metric_utils
-from . import metric_utils
+import metric_utils
+# from . import metric_utils
 
 
 class MICODQNLoss(LossModule):
@@ -377,9 +377,12 @@ class MICODQNLoss(LossModule):
 
         td_target_copy = tensordict.clone(False)
         with self.target_value_network_params.to_module(self.value_network):
-            self.value_network(td_target_copy)
-            target_r = td_target_copy['representation'][0::2]
-            target_next_r = td_target_copy['representation'][1::2]
+            with torch.no_grad():
+                self.value_network(td_target_copy)
+                target_r = td_target_copy['representation'][0::2]
+                target_r = target_r.detach()
+                target_next_r = td_target_copy['representation'][1::2]
+                target_next_r = target_next_r.detach()
 
         # NOTE: the rewards are gotten from the next keys of the current states (even rows)
         rewards = td_online_copy['next','reward'][0::2]

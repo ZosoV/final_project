@@ -1,14 +1,40 @@
 import torch
+from functorch import vmap
 
 EPSILON = 1e-9
+SQRT_TOLERANCE = 1e-30
 
-def _sqrt(x):
-  # zeros like instead of zeros
-  # It is because vmap works with a weird way of broadcasting
-  # and a weird structure based on tensors
-  tol = torch.zeros_like(x)
-  return torch.sqrt(torch.maximum(x, tol))
+# Define a custom autograd function for _sqrt
+class SqrtWithTolerance(torch.autograd.Function):
+    
+    generate_vmap_rule = True
 
+    @staticmethod
+    def forward(x):
+        return torch.sqrt(torch.clamp(x, min=SQRT_TOLERANCE))
+    
+    @staticmethod
+    def setup_context(ctx, inputs, output):
+        # Ensure tensors are properly saved and restored during functorch transforms
+        x, = inputs
+        square_root = output
+        ctx.save_for_backward(x, square_root)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        x, square_root = ctx.saved_tensors
+        grad_input = grad_output / (2 * square_root)
+        grad_input = torch.where(x > SQRT_TOLERANCE, grad_input, torch.zeros_like(x))
+        return grad_input
+
+
+# Utility function to use the custom sqrt
+def sqrt_with_tolerance(x):
+    return SqrtWithTolerance.apply(x)
+
+# Define l2 and cosine_distance functions using the custom sqrt
+def l2(x, y):
+    return sqrt_with_tolerance(torch.sum((x - y)**2))
 
 def cosine_distance(x, y):
   # NOTE: the cosine similarity is not calculate directly for 
@@ -24,8 +50,7 @@ def cosine_distance(x, y):
   # sin^2(theta) + cos^2(theta) = 1
   # you can get sin(theta) = sqrt(1 - cos^2(theta))
   # and the arctan2(sin(theta), cos(theta)) = theta
-  return torch.arctan2(_sqrt(1. - cos_similarity**2), cos_similarity)
-
+  return torch.arctan2(sqrt_with_tolerance(1. - cos_similarity**2), cos_similarity)
 
 def squarify(x):
     # Squarify will take the input and adds a new dimension between the batch and the representation
@@ -85,7 +110,8 @@ def representation_distances(first_representations, second_representations, beta
   # Check what function is using
   base_distances = torch.vmap(cosine_distance, in_dims=(0, 0))(first_squared_reps,
                                                          second_squared_reps)
-  base_distances = base_distances
+  # base_distances = vmap(cosine_distance, in_dims=(0, 0, None))(first_squared_reps, second_squared_reps, tol)
+
   # Sum along the second dimension and normalize the distance
   # NOTE: this is practically the first term of U in the paper
   norm_average = 0.5 * (torch.sum(torch.square(first_squared_reps), -1) +
@@ -108,4 +134,5 @@ def target_distances(representations, rewards, cumulative_gamma):
   squared_rews_transp = squared_rews_transp.reshape(
       (squared_rews_transp.shape[0]**2))
   reward_diffs = torch.abs(squared_rews - squared_rews_transp)
-  return reward_diffs + cumulative_gamma * next_state_similarities
+  target_dist = reward_diffs + cumulative_gamma * next_state_similarities
+  return target_dist.detach()

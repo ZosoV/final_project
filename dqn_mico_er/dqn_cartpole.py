@@ -210,6 +210,8 @@ def main(cfg: "DictConfig"):
     mico_losses = torch.zeros(num_updates, device=device)
     total_losses = torch.zeros(num_updates, device=device)
 
+    with loss_module.value_network_params.to_module(loss_module.value_network):
+        wandb.watch(loss_module.value_network, log="all")
 
     # NOTE: IMPORTANT: collectors allows me to collect transitions in a different way
     # than the one I am get used to.

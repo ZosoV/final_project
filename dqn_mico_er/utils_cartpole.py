@@ -11,6 +11,7 @@ from torchrl.envs.libs.gym import GymEnv
 from torchrl.modules import MLP, QValueActor
 from torchrl.record import VideoRecorder
 from tensordict.nn import TensorDictModule
+import torch.nn.init as init
 
 # ====================================================================
 # Environment utils
@@ -35,9 +36,9 @@ class MICOMLPNetwork(torch.nn.Module):
                  in_features,
                  activation_class, 
                  encoder_out_features,
-                 mlp_out_features,
+                 q_net_out_features,
                  encoder_num_cells = None,
-                 mlp_num_cells = None):
+                 q_net_num_cells = None):
         super(MICOMLPNetwork, self).__init__()
 
         # TODO: Intitialize the network with 
@@ -45,34 +46,44 @@ class MICOMLPNetwork(torch.nn.Module):
 
         self.activation = activation_class()
 
+        # Encoder section
         if encoder_num_cells is None:
             encoder_num_cells = []
         layers_sizes = [in_features] + encoder_num_cells + [encoder_out_features]
 
-        self.layers = torch.nn.ModuleList()
+        self.encoder = torch.nn.ModuleList()
         for i in range(len(layers_sizes) - 1):
-            self.layers.append(torch.nn.Linear(layers_sizes[i], layers_sizes[i+1]))
+            self.encoder.append(torch.nn.Linear(layers_sizes[i], layers_sizes[i+1]))
 
-        if mlp_num_cells is None:
-            mlp_num_cells = []
+        # Q-net section
+        if q_net_num_cells is None:
+            q_net_num_cells = []
 
-        layers_sizes = [encoder_out_features] + mlp_num_cells + [mlp_out_features.item()]
+        layers_sizes = [encoder_out_features] + q_net_num_cells + [q_net_out_features.item()]
 
-        self.mlp_layers = torch.nn.ModuleList()
+        self.q_net = torch.nn.ModuleList()
         for i in range(len(layers_sizes) - 1):
-            self.mlp_layers.append(torch.nn.Linear(layers_sizes[i], layers_sizes[i+1]))
-        
+            self.q_net.append(torch.nn.Linear(layers_sizes[i], layers_sizes[i+1]))
+
+    # def _initialize_weights(self):
+    #     for m in self.modules():
+    #         if isinstance(m, nn.Linear):
+    #             init.xavier_uniform_(m.weight)
+    #             if m.bias is not None:
+    #                 init.zeros_(m.bias)       
     
     def forward(self, x):
-        for i in range(len(self.layers)):
-            x = self.activation(self.layers[i](x))
+        for i in range(len(self.encoder) - 1):
+            x = self.activation(self.encoder[i](x))
 
+        x = self.encoder[-1](x)
         representation = x
+        x = self.activation(x)
 
-        for i in range(len(self.mlp_layers)-1):
-            x = self.activation(self.mlp_layers[i](x))
+        for i in range(len(self.q_net)-1):
+            x = self.activation(self.q_net[i](x))
 
-        return self.mlp_layers[-1](x), representation
+        return self.q_net[-1](x), representation
 
 def make_dqn_modules(proof_environment, policy_cfg):
 
@@ -104,8 +115,8 @@ def make_dqn_modules(proof_environment, policy_cfg):
             activation_class=activation_class,
             encoder_num_cells=policy_cfg.encoder.layers,
             encoder_out_features=policy_cfg.encoder.out_features,
-            mlp_num_cells=policy_cfg.network.layers,
-            mlp_out_features=num_outputs,
+            q_net_num_cells=policy_cfg.q_net.layers,
+            q_net_out_features=num_outputs,
         )
 
         module = TensorDictModule(module,
