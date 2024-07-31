@@ -52,9 +52,6 @@ def main(cfg: "DictConfig"):
         # if I don't need reproducibility I could comment this line
         torch.backends.cudnn.benchmark = False
         
-    # Print the current seed and group
-    print(f"Running with Seed: {seed}")
-    print(f"Group: {cfg.logger.group_name}")
 
     device = cfg.device
     if device in ("", None):
@@ -63,6 +60,10 @@ def main(cfg: "DictConfig"):
         else:
             device = "cpu"
     device = torch.device(device)
+
+    # Print the current seed and group
+    print(f"Running with Seed: {seed} on Device: {device}")
+    print(f"Group: {cfg.logger.group_name}")
 
     # Get current date and time
     current_date = datetime.datetime.now()

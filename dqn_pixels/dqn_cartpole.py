@@ -52,10 +52,6 @@ def main(cfg: "DictConfig"):
         # But it reduces a little bit the performance
         # if I don't need reproducibility I could comment this line
         torch.backends.cudnn.benchmark = False
-        
-    # Print the current seed and group
-    print(f"Running with Seed: {seed}")
-    print(f"Group: {cfg.logger.group_name}")
 
     # Correct for frame_skip # NOTE: additional line
     frame_skip = 4
@@ -71,6 +67,10 @@ def main(cfg: "DictConfig"):
         else:
             device = "cpu"
     device = torch.device(device)
+
+    # Print the current seed and group
+    print(f"Running with Seed: {seed} on Device: {device}")
+    print(f"Group: {cfg.logger.group_name}")
 
     # Get current date and time
     current_date = datetime.datetime.now()

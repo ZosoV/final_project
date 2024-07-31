@@ -15,6 +15,7 @@ training_loop/
 dqn/outputs/
 .hydra/
 wandb/
+.vscode/
 
 # Distribution / packaging
 .Python
