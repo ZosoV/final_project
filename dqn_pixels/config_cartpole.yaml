@@ -1,7 +1,7 @@
   
 device: null
 
-exp_name: DQN
+exp_name: DQN_pixels
 
 # Environment
 # SEEDS: [118398, 676190, 786456, 171936, 887739, 919409, 711872, 442081, 189061, 117840]
@@ -11,23 +11,29 @@ env:
 
 # collector
 collector:
-  total_frames: 350_100
-  frames_per_batch: 10
+  total_frames: 2_000_016
+  frames_per_batch: 16
   eps_start: 1.0
   eps_end: 0.05
-  annealing_frames: 250_000
-  init_random_frames: 10_000
+  annealing_frames: 150_000
+  init_random_frames: 20_000
 
 # policy
 policy:
-  type: "MLP"  # Example type, adjust based on your architecture (e.g., CNN, RNN)
-  layers: [120, 84]  # Number of units in each layer
+  type: "CNN_MLP"
+  cnn_net:
+    num_cells: [32, 64, 64] # number of kernel per layer
+    kernel_sizes: [8, 4, 3]
+    strides: [4, 2, 1]
+  mlp_net:
+    num_cells: [512]  # Number of units per layer
   activation: "ReLU"  # Activation function used in the layers
 
 # buffer
 buffer:
-  buffer_size: 10_000 # Check the paper and the effect of the buffer size to have an intuition
-  batch_size: 128
+  buffer_size: 50_000
+  batch_size: 32
+  scratch_dir: null
   prioritized_replay: False
   alpha: 0.7
   beta: 0.4
@@ -35,19 +41,19 @@ buffer:
 # logger
 logger:
   backend: wandb
-  project_name: torchrl_example_dqn
+  project_name: dqn_pixels_cartpole
   group_name: null
-  test_interval: 25_000
-  num_test_episodes: 5
+  test_interval: 50_000
+  num_test_episodes: 3
   video: False
 
 # Optim
 optim:
-  lr: 2.5e-4
+  lr: 0.00015
   max_grad_norm: 10
 
 # loss
 loss:
   gamma: 0.99
-  hard_update_freq: 50
+  hard_update_freq: 1_000
   num_updates: 1

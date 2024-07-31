@@ -18,7 +18,7 @@ import torch
 from tensordict.nn import TensorDictSequential
 # from torchrl._utils import logger as torchrl_logger
 from torchrl.collectors import SyncDataCollector
-from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer
+from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer, LazyMemmapStorage
 from torchrl.envs import ExplorationType, set_exploration_type
 from torchrl.modules import EGreedyModule
 from torchrl.objectives import DQNLoss, HardUpdate
@@ -27,6 +27,7 @@ from torchrl.data.replay_buffers.samplers import RandomSampler, PrioritizedSampl
 
 # from torchrl.record.loggers import generate_exp_name, get_logger
 from utils_cartpole import eval_model, make_dqn_model, make_env, print_hyperparameters
+import tempfile
 
 # TODO: TODOS:
 # [ ] Check the parameters of the replay buffer what is happening in the iteration 210000
@@ -56,6 +57,13 @@ def main(cfg: "DictConfig"):
     print(f"Running with Seed: {seed}")
     print(f"Group: {cfg.logger.group_name}")
 
+    # Correct for frame_skip # NOTE: additional line
+    frame_skip = 4
+    total_frames = cfg.collector.total_frames // frame_skip
+    frames_per_batch = cfg.collector.frames_per_batch // frame_skip
+    init_random_frames = cfg.collector.init_random_frames // frame_skip
+    test_interval = cfg.logger.test_interval // frame_skip
+
     device = cfg.device
     if device in ("", None):
         if torch.cuda.is_available():
@@ -78,7 +86,7 @@ def main(cfg: "DictConfig"):
 
     # Make the components
     # Policy
-    model = make_dqn_model(cfg.env.env_name, cfg.policy)
+    model = make_dqn_model(cfg.env.env_name, cfg.policy, frame_skip)
 
 
     # NOTE: annealing_num_steps: number of steps 
@@ -99,14 +107,14 @@ def main(cfg: "DictConfig"):
     # NOTE: init_random_frames: Number of frames 
     # for which the policy is ignored before it is called.
     collector = SyncDataCollector(
-        create_env_fn=make_env(cfg.env.env_name, "cpu", cfg.env.seed),
+        create_env_fn=make_env(cfg.env.env_name, frame_skip = 4 , device = device, seed = cfg.env.seed),
         policy=model_explore,
-        frames_per_batch=cfg.collector.frames_per_batch,
-        total_frames=cfg.collector.total_frames,
-        device="cpu",
-        storing_device="cpu",
+        frames_per_batch=frames_per_batch,
+        total_frames=total_frames,
+        device=device,
+        storing_device=device,
         max_frames_per_traj=-1,
-        init_random_frames=cfg.collector.init_random_frames,
+        init_random_frames=init_random_frames,
     )
 
     # Create the replay buffer
@@ -118,13 +126,19 @@ def main(cfg: "DictConfig"):
             beta=cfg.buffer.beta)
     else:
         sampler = RandomSampler()
-        
+
+    if cfg.buffer.scratch_dir is None:
+        tempdir = tempfile.TemporaryDirectory()
+        scratch_dir = tempdir.name
+    else:
+        scratch_dir = cfg.buffer.scratch_dir
+
     replay_buffer = TensorDictReplayBuffer(
         pin_memory=False,
-        prefetch=10,
-        storage=LazyTensorStorage(
+        prefetch=3,
+        storage=LazyMemmapStorage( # NOTE: additional line
             max_size=cfg.buffer.buffer_size,
-            device="cpu",
+            scratch_dir=scratch_dir,
         ),
         batch_size=cfg.buffer.batch_size,
         sampler = sampler
@@ -136,8 +150,11 @@ def main(cfg: "DictConfig"):
         loss_function="l2", 
         delay_value=True, # delay_value=True means we will use a target network
     )
+    # NOTE: additional line for Atari games
+    # loss_module.set_keys(done="end-of-life", terminated="end-of-life")
+    
     loss_module.make_value_estimator(gamma=cfg.loss.gamma) # only to change the gamma value
-    loss_module = loss_module.to(device)
+    loss_module = loss_module.to(device) # NOTE: check if need adding
     target_net_updater = HardUpdate(
         loss_module, value_network_update_interval=cfg.loss.hard_update_freq
     )
@@ -149,7 +166,8 @@ def main(cfg: "DictConfig"):
     logger = None
 
     # Create the test environment
-    test_env = make_env(cfg.env.env_name, "cpu", from_pixels=cfg.logger.video, seed=cfg.env.seed)
+    # NOTE: new line
+    test_env = make_env(cfg.env.env_name, frame_skip, device, seed=cfg.env.seed, is_test=True)
     if cfg.logger.video:
         test_env.insert_transform(
             0,
@@ -157,18 +175,20 @@ def main(cfg: "DictConfig"):
                 logger, tag=f"rendered/{cfg.env.env_name}", in_keys=["pixels"]
             ),
         )
+    test_env.eval()
 
     # Main loop
     collected_frames = 0
     total_episodes = 0
     start_time = time.time()
     num_updates = cfg.loss.num_updates
+    max_grad = cfg.optim.max_grad_norm
     batch_size = cfg.buffer.batch_size
-    test_interval = cfg.logger.test_interval
+    test_interval = test_interval
     num_test_episodes = cfg.logger.num_test_episodes
-    frames_per_batch = cfg.collector.frames_per_batch
-    pbar = tqdm.tqdm(total=cfg.collector.total_frames)
-    init_random_frames = cfg.collector.init_random_frames
+    frames_per_batch = frames_per_batch
+    pbar = tqdm.tqdm(total=total_frames)
+    init_random_frames = init_random_frames
     sampling_start = time.time()
     q_losses = torch.zeros(num_updates, device=device)
 
@@ -196,10 +216,10 @@ def main(cfg: "DictConfig"):
 
         # NOTE: This reshape must be for frame data (maybe)
         data = data.reshape(-1)
-        current_frames = data.numel()
-        replay_buffer.extend(data)
+        current_frames = data.numel() * frame_skip
         collected_frames += current_frames
         greedy_module.step(current_frames)
+        replay_buffer.extend(data)
 
         # Get the number of episodes
         total_episodes += data["next", "done"].sum()
@@ -243,6 +263,9 @@ def main(cfg: "DictConfig"):
             q_loss = loss_td["loss"]
             optimizer.zero_grad()
             q_loss.backward()
+            torch.nn.utils.clip_grad_norm_(
+                list(loss_module.parameters()), max_norm=max_grad
+            )
             optimizer.step()
 
             # Update the priorities
@@ -262,8 +285,8 @@ def main(cfg: "DictConfig"):
                 / frames_per_batch,
                 "train/q_loss": q_losses.mean().item(),
                 "train/epsilon": greedy_module.eps,
-                "train/sampling_time": sampling_time,
-                "train/training_time": training_time,
+                # "train/sampling_time": sampling_time,
+                # "train/training_time": training_time,
             }
         )
 
@@ -287,7 +310,7 @@ def main(cfg: "DictConfig"):
                 log_info.update(
                     {
                         "eval/reward": test_rewards,
-                        "eval/eval_time": eval_time,
+                        # "eval/eval_time": eval_time,
                     }
                 )
 

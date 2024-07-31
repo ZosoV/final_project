@@ -41,9 +41,6 @@ class MICOMLPNetwork(torch.nn.Module):
                  q_net_num_cells = None):
         super(MICOMLPNetwork, self).__init__()
 
-        # TODO: Intitialize the network with 
-        # xavier_uniform initialization
-
         self.activation = activation_class()
 
         # Encoder section
