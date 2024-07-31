@@ -32,24 +32,24 @@ for seed in "${seeds[@]}"; do
         optim.lr=0.0001 \
         exp_name=DQN_pixels_lr_0_0001
 
-    python dqn_cartpole.py -m \
-        env.seed=$seed \
-        optim.lr=0.0005 \
-        exp_name=DQN_pixels_lr_0_0005
+    # python dqn_cartpole.py -m \
+    #     env.seed=$seed \
+    #     optim.lr=0.0005 \
+    #     exp_name=DQN_pixels_lr_0_0005
 
-    python dqn_cartpole.py -m \
-        env.seed=$seed \
-        optim.lr=0.001 \
-        exp_name=DQN_pixels_lr_0_001
+    # python dqn_cartpole.py -m \
+    #     env.seed=$seed \
+    #     optim.lr=0.001 \
+    #     exp_name=DQN_pixels_lr_0_001
 
-    python dqn_cartpole.py -m \
-        env.seed=$seed \
-        optim.lr=0.005 \
-        exp_name=DQN_pixels_lr_0_0005
+    # python dqn_cartpole.py -m \
+    #     env.seed=$seed \
+    #     optim.lr=0.005 \
+    #     exp_name=DQN_pixels_lr_0_0005
 
-    python dqn_cartpole.py -m \
-        env.seed=$seed \
-        loss.hard_update_freq: 5000 \
-        exp_name=DQN_pixels_hard_update_freq_5000
+    # python dqn_cartpole.py -m \
+    #     env.seed=$seed \
+    #     loss.hard_update_freq: 5000 \
+    #     exp_name=DQN_pixels_hard_update_freq_5000
 
 done
