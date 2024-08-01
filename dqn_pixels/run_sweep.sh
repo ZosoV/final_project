@@ -9,17 +9,7 @@ for seed in "${seeds[@]}"; do
 
     # python dqn_cartpole.py -m \
     #     env.seed=$seed \
-    #     collector.annealing_frames=500000 \
-    #     exp_name=DQN_pixels_annealing_frames_500_000
-
-    # python dqn_cartpole.py -m \
-    #     env.seed=$seed \
-    #     collector.annealing_frames=1000000 \
-    #     exp_name=DQN_pixels_annealing_frames_1_000_000
-
-    # python dqn_cartpole.py -m \
-    #     env.seed=$seed \
-    #     optim.max_grad_norm=100
+    #     optim.max_grad_norm=100 \
     #     exp_name=DQN_pixels_lr_0_001_max_grad_norm_100
 
     # python dqn_cartpole.py -m \
@@ -34,13 +24,13 @@ for seed in "${seeds[@]}"; do
 
     python dqn_cartpole.py -m \
         env.seed=$seed \
-        loss.hard_update_freq=5000 \
-        exp_name=DQN_pixels_lr_0_001_hard_update_freq_5000
+        loss.hard_update_freq=500 \
+        exp_name=DQN_pixels_lr_0_001_hard_update_freq_500
 
     python dqn_cartpole.py -m \
         env.seed=$seed \
-        loss.hard_update_freq=500 \
-        exp_name=DQN_pixels_lr_0_001_hard_update_freq_500
+        loss.hard_update_freq=5000 \
+        exp_name=DQN_pixels_lr_0_001_hard_update_freq_5000
     
     python dqn_cartpole.py -m \
         env.seed=$seed \
@@ -51,6 +41,5 @@ for seed in "${seeds[@]}"; do
         env.seed=$seed \
         buffer.buffer_size=100000 \
         exp_name=DQN_pixels_lr_0_001_buffer_size_100_000
-
 
 done
