@@ -139,7 +139,6 @@ def main(cfg: "DictConfig"):
         storage=LazyMemmapStorage( # NOTE: additional line
             max_size=cfg.buffer.buffer_size,
             scratch_dir=scratch_dir,
-            device=device,
         ),
         batch_size=cfg.buffer.batch_size,
         sampler = sampler
