@@ -37,7 +37,7 @@ import tempfile
 # I am only using 143MB from 8GB of GPU memory
 # [ ] Check how smoothing works in wandb and check if there is another way to calculate that expected reward
 
-@hydra.main(config_path=".", config_name="config_cartpole", version_base=None)
+@hydra.main(config_path=".", config_name="config_cartpole_atari", version_base=None)
 def main(cfg: "DictConfig"):
 
     # Set seeds for reproducibility

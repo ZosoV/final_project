@@ -11,13 +11,13 @@ env:
 
 # collector
 collector:
-  total_frames: 5_000_016      # 5_000_016
+  total_frames: 40_000_100  
   frames_per_batch: 16
   eps_start: 1.0
-  eps_end: 0.05
-  annealing_frames: 200_000 # 3_600_000
-  init_random_frames: 50_000
-  frame_skip: 2
+  eps_end: 0.01
+  annealing_frames: 4_000_000 # 3_600_000
+  init_random_frames: 200_000
+  frame_skip: 4
 
 # policy
 policy:
@@ -32,8 +32,8 @@ policy:
 
 # buffer
 buffer:
-  buffer_size: 50_000
-  batch_size: 128
+  buffer_size: 1_000_000
+  batch_size: 32
   scratch_dir: null
   prioritized_replay: False
   alpha: 0.7
@@ -44,17 +44,17 @@ logger:
   backend: wandb
   project_name: dqn_pixels_cartpole
   group_name: null
-  test_interval: 50_000
+  test_interval: 1_000_000
   num_test_episodes: 3
   video: False
 
 # Optim
 optim:
-  lr: 0.001
+  lr: 0.00025
   max_grad_norm: 10
 
 # loss
 loss:
   gamma: 0.99
-  hard_update_freq: 50
+  hard_update_freq: 10_000
   num_updates: 1
