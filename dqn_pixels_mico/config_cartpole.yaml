@@ -11,11 +11,11 @@ env:
 
 # collector
 collector:
-  total_frames: 2_000_016      # 5_000_016
+  total_frames: 2_000_016
   frames_per_batch: 16
   eps_start: 1.0
   eps_end: 0.05
-  annealing_frames: 1_500_000 # 3_600_000
+  annealing_frames: 150_000
   init_random_frames: 20_000
 
 # policy
@@ -49,7 +49,7 @@ logger:
 
 # Optim
 optim:
-  lr: 0.001
+  lr: 0.00015
   max_grad_norm: 10
 
 # loss
