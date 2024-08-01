@@ -107,7 +107,7 @@ def main(cfg: "DictConfig"):
     # NOTE: init_random_frames: Number of frames 
     # for which the policy is ignored before it is called.
     collector = SyncDataCollector(
-        create_env_fn=make_env(cfg.env.env_name, frame_skip = 4 , device = device, seed = cfg.env.seed),
+        create_env_fn=make_env(cfg.env.env_name, frame_skip = frame_skip , device = device, seed = cfg.env.seed),
         policy=model_explore,
         frames_per_batch=frames_per_batch,
         total_frames=total_frames,

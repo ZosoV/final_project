@@ -86,7 +86,7 @@ def main(cfg: "DictConfig"):
 
     # Make the components
     # Policy
-    model = make_dqn_model(cfg.env.env_name, cfg.policy, frame_skip)
+    model = make_dqn_model(cfg.env.env_name, cfg.policy, frame_skip).to(device)
 
 
     # NOTE: annealing_num_steps: number of steps 
@@ -97,7 +97,7 @@ def main(cfg: "DictConfig"):
         eps_init=cfg.collector.eps_start,
         eps_end=cfg.collector.eps_end,
         spec=model.spec,
-    )
+    ).to(device)
     model_explore = TensorDictSequential(
         model,
         greedy_module,
@@ -107,7 +107,7 @@ def main(cfg: "DictConfig"):
     # NOTE: init_random_frames: Number of frames 
     # for which the policy is ignored before it is called.
     collector = SyncDataCollector(
-        create_env_fn=make_env(cfg.env.env_name, frame_skip = 4 , device = device, seed = cfg.env.seed),
+        create_env_fn=make_env(cfg.env.env_name, frame_skip = frame_skip , device = device, seed = cfg.env.seed),
         policy=model_explore,
         frames_per_batch=frames_per_batch,
         total_frames=total_frames,
@@ -139,6 +139,7 @@ def main(cfg: "DictConfig"):
         storage=LazyMemmapStorage( # NOTE: additional line
             max_size=cfg.buffer.buffer_size,
             scratch_dir=scratch_dir,
+            device=device,
         ),
         batch_size=cfg.buffer.batch_size,
         sampler = sampler
