@@ -263,9 +263,9 @@ def main(cfg: "DictConfig"):
             q_loss = loss_td["loss"]
             optimizer.zero_grad()
             q_loss.backward()
-            torch.nn.utils.clip_grad_norm_(
-                list(loss_module.parameters()), max_norm=max_grad
-            )
+            # torch.nn.utils.clip_grad_norm_(
+            #     list(loss_module.parameters()), max_norm=max_grad
+            # )
             optimizer.step()
 
             # Update the priorities
