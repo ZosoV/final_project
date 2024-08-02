@@ -45,15 +45,15 @@ def make_env(env_name="CartPole-v1", frame_skip = 4,
     # env.append_transform(NoopResetEnv(noops=30, random=True)) # NOTE: Cartpole with no noops will fall into reset in the begining
                                                                 # I could use an small noop reset to avoid this, but I think is not necesary
                                                                 # in this case. Analyze this later
-    if not is_test:
+    # if not is_test:
         # env.append_transform(EndOfLifeTransform()) # NOTE: Check my environment is not based on lives (so not important)
-        env.append_transform(SignTransform(in_keys=["reward"])) #NOTE: cartpole has no negative rewards
+        # env.append_transform(SignTransform(in_keys=["reward"])) #NOTE: cartpole has no negative rewards
     env.append_transform(ToTensorImage()) 
     env.append_transform(GrayScale())
     env.append_transform(Resize(84, 84))
     env.append_transform(CatFrames(N=4, dim=-3))
     env.append_transform(RewardSum())
-    env.append_transform(StepCounter(max_steps=4500)) # NOTE: Cartpole-v1 has a max of 500 steps
+    env.append_transform(StepCounter()) # NOTE: Cartpole-v1 has a max of 500 steps
     env.append_transform(DoubleToFloat())
     env.append_transform(VecNorm(in_keys=["pixels"]))
     env.set_seed(seed)

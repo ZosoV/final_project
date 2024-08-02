@@ -175,7 +175,7 @@ def main(cfg: "DictConfig"):
                 logger, tag=f"rendered/{cfg.env.env_name}", in_keys=["pixels"]
             ),
         )
-    test_env.eval()
+    # test_env.eval()
 
     # Main loop
     collected_frames = 0
