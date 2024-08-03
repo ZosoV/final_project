@@ -10,11 +10,14 @@ from torchrl.data import CompositeSpec
 from torchrl.envs.libs.gym import GymEnv
 from torchrl.modules import ConvNet, MLP, QValueActor
 from torchrl.record import VideoRecorder
+from tensordict.nn import TensorDictModule
+
 from torchrl.envs import (
     CatFrames,
     DoubleToFloat,
     EndOfLifeTransform,
     GrayScale,
+    CenterCrop,
     GymEnv,
     NoopResetEnv,
     Resize,
@@ -32,7 +35,7 @@ from torchrl.envs import (
 
 
 def make_env(env_name="CartPole-v1", frame_skip = 4, 
-             device="cpu", seed = 0, is_test=False):
+             device="cpu", seed = 0, cropping = True):#, is_test=False):
 
     env = GymEnv(
         env_name,
@@ -50,6 +53,8 @@ def make_env(env_name="CartPole-v1", frame_skip = 4,
         # env.append_transform(SignTransform(in_keys=["reward"])) #NOTE: cartpole has no negative rewards
     env.append_transform(ToTensorImage()) 
     env.append_transform(GrayScale())
+    if cropping:
+        env.append_transform(CenterCrop(400, in_keys = ["pixels"]))
     env.append_transform(Resize(84, 84))
     env.append_transform(CatFrames(N=4, dim=-3))
     env.append_transform(RewardSum())
@@ -85,8 +90,8 @@ class DQNNetwork(torch.nn.Module):
         self.activation_class = activation_class()
         self.use_batch_norm = use_batch_norm
       
-        # Input shape example: (10, 4, 84, 84)
-        _, channels, width, height = input_shape
+        # Input shape example: (4, 84, 84)
+        channels, width, height = input_shape
         self.num_outputs = num_outputs
 
         # Xavier (Glorot) uniform initialization
@@ -149,21 +154,29 @@ class DQNNetwork(torch.nn.Module):
         if self.output_layer.bias is not None:
             torch.nn.init.zeros_(self.output_layer.bias)
 
-    def forward(self, x):
-        # x = x.float() / 255.0 # Already normalized by VecNorm
+    def forward(self, input):
+
+        x = input
         for i, conv_layer in enumerate(self.conv_layers):
             x = conv_layer(x)
-            if self.use_batch_norm:
+
+            # NOTE: The collector uses a tensor for checking something
+            # but this tensor is not in batch format, so we need to
+            # check if the tensor is in batch format to apply batch norm
+            if self.use_batch_norm and len(input.shape) == 4:
                 x = self.batch_norm_layers[i](x)
             x = self.activation_class(x)
-        x = x.view(x.size(0), -1)  # Flatten the tensor
+
+        if len(input.shape) == 4:
+            x = x.view(x.size(0), -1)  # Flatten the tensor
+        else:
+            x = x.view(-1)
 
         if self.fc_layers is not None:
             for fc_layer in self.fc_layers:
                 x = self.activation_class(fc_layer(x))
         q_values = self.output_layer(x)
         return q_values
-
 
 def make_dqn_modules_pixels(proof_environment, policy_cfg):
 
@@ -180,25 +193,42 @@ def make_dqn_modules_pixels(proof_environment, policy_cfg):
     print(f"Using {policy_cfg.type} for q-net architecture")
     # Define Q-Value Module
     activation_class = getattr(torch.nn, policy_cfg.activation)
-    cnn = ConvNet(
-        activation_class=activation_class,
-        num_cells= list(policy_cfg.cnn_net.num_cells),
+
+    # NOTE: This was the previous way to define our cnn
+    # cnn = ConvNet(
+    #     activation_class=activation_class,
+    #     num_cells= list(policy_cfg.cnn_net.num_cells),
+    #     kernel_sizes=list(policy_cfg.cnn_net.kernel_sizes),
+    #     strides=list(policy_cfg.cnn_net.strides),
+    # )
+    # cnn_output = cnn(torch.ones(input_shape))
+    # mlp = MLP(
+    #     in_features=cnn_output.shape[-1],
+    #     activation_class=activation_class,
+    #     out_features=num_actions,
+    #     num_cells=policy_cfg.mlp_net.num_cells,
+    # )
+
+    q_net = DQNNetwork(
+        input_shape=input_shape,
+        num_outputs=num_actions,
+        num_cells_cnn=list(policy_cfg.cnn_net.num_cells),
         kernel_sizes=list(policy_cfg.cnn_net.kernel_sizes),
         strides=list(policy_cfg.cnn_net.strides),
-    )
-    cnn_output = cnn(torch.ones(input_shape))
-    mlp = MLP(
-        in_features=cnn_output.shape[-1],
+        num_cells_mlp=list(policy_cfg.mlp_net.num_cells),
         activation_class=activation_class,
-        out_features=num_actions,
-        num_cells=policy_cfg.mlp_net.num_cells,
+        use_batch_norm=policy_cfg.use_batch_norm,
     )
+
+    q_net = TensorDictModule(q_net,
+        in_keys=["pixels"], 
+        out_keys=["action_value"])
 
 
     # NOTE: Do I need CompositeSpec here?
     # I think I only need proof_environment.action_spec
     qvalue_module = QValueActor(
-        module=torch.nn.Sequential(cnn, mlp),
+        module=q_net,
         spec=CompositeSpec(action=action_spec), 
         in_keys=["pixels"],
     )

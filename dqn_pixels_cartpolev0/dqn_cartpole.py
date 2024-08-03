@@ -167,7 +167,7 @@ def main(cfg: "DictConfig"):
 
     # Create the test environment
     # NOTE: new line
-    test_env = make_env(cfg.env.env_name, frame_skip, device, seed=cfg.env.seed, is_test=True)
+    test_env = make_env(cfg.env.env_name, frame_skip, device, seed=cfg.env.seed)#, is_test=True)
     if cfg.logger.video:
         test_env.insert_transform(
             0,
@@ -175,7 +175,7 @@ def main(cfg: "DictConfig"):
                 logger, tag=f"rendered/{cfg.env.env_name}", in_keys=["pixels"]
             ),
         )
-    # test_env.eval()
+    test_env.eval()
 
     # Main loop
     collected_frames = 0
@@ -232,7 +232,10 @@ def main(cfg: "DictConfig"):
         # When there are at least one done trajectory in the data batch
         if len(episode_rewards) > 0:
             episode_reward_mean = episode_rewards.mean().item()
-            episode_length = data["next", "step_count"][data["next", "done"]]
+
+            # NOTE: we have to account for the frames with are stacking
+            # This doesn't happen with episode_rewards because it get the cumulative reward
+            episode_length = data["next", "step_count"][data["next", "done"]] * frame_skip
             episode_length_mean = episode_length.sum().item() / len(episode_length)
 
             # NOTE: this log will be updated only if there is a new episode in the current
@@ -263,9 +266,9 @@ def main(cfg: "DictConfig"):
             q_loss = loss_td["loss"]
             optimizer.zero_grad()
             q_loss.backward()
-            # torch.nn.utils.clip_grad_norm_(
-            #     list(loss_module.parameters()), max_norm=max_grad
-            # )
+            torch.nn.utils.clip_grad_norm_(
+                list(loss_module.parameters()), max_norm=max_grad
+            )
             optimizer.step()
 
             # Update the priorities

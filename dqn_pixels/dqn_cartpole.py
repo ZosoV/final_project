@@ -167,7 +167,7 @@ def main(cfg: "DictConfig"):
 
     # Create the test environment
     # NOTE: new line
-    test_env = make_env(cfg.env.env_name, frame_skip, device, seed=cfg.env.seed, is_test=True)
+    test_env = make_env(cfg.env.env_name, frame_skip, device, seed=cfg.env.seed) #, is_test=True)
     if cfg.logger.video:
         test_env.insert_transform(
             0,

@@ -379,10 +379,9 @@ class MICODQNLoss(LossModule):
         with self.target_value_network_params.to_module(self.value_network):
             with torch.no_grad():
                 self.value_network(td_target_copy)
-                target_r = td_target_copy['representation'][0::2]
-                target_r = target_r.detach()
-                target_next_r = td_target_copy['representation'][1::2]
-                target_next_r = target_next_r.detach()
+                batch_target_representation = td_target_copy['representation'].detach()
+                target_r = batch_target_representation[0::2]
+                target_next_r = batch_target_representation[1::2]
 
         # NOTE: the rewards are gotten from the next keys of the current states (even rows)
         rewards = td_online_copy['next','reward'][0::2]
@@ -406,6 +405,37 @@ class MICODQNLoss(LossModule):
             priority_tensor = priority_tensor.unsqueeze(-1)
         if tensordict.device is not None:
             priority_tensor = priority_tensor.to(tensordict.device)
+
+        # TODO: Calculate the mico priority
+
+        # NOTE: online distance calculates the distances all vs all on the current batch 
+        # by taking the online_representation and target_representation. This distance metric 
+        # is our best approximation to behavioral similarity, which can be used as a surrogate
+        # for the priority.
+
+        # However for example, if I have a batch of 32, the online distance will return a tensor
+        # of 32x32=1024 distances, and we want to assign a priority only to the initial 32 states
+        # so we are gonna take the average on a window of 32
+        # Additioanlly, notice that we are not taking into acount the next states, we have to do the
+        # same with the next states. So that, it's better to get the target of the whole batch
+        # Remember that the even rows are the current states and the odd rows are the next states
+        # But here we are gonna use all the batch.
+
+        batch_online_representation = td_online_copy['representation']
+        
+
+        mico_distance = metric_utils.representation_distances(
+            batch_online_representation, batch_target_representation, self.mico_beta)
+        
+        batch_size = batch_online_representation.shape[0]
+
+        # Mico distance is a unidimensional tensor with the distances of all the pairs
+        # Apply the reshape to get the distances of all the pairs, and get the mean
+        # of the distances of the current states
+        mico_distance = mico_distance.reshape((batch_size**batch_size))
+        mico_distance = mico_distance.mean(1)
+
+        mico_priority = mico_distance
 
         tensordict.set(
             self.tensor_keys.priority,
