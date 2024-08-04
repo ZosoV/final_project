@@ -29,14 +29,6 @@ from torchrl.data.replay_buffers.samplers import RandomSampler, PrioritizedSampl
 from utils_cartpole import eval_model, make_dqn_model, make_env, print_hyperparameters
 import tempfile
 
-# TODO: TODOS:
-# [ ] Check the parameters of the replay buffer what is happening in the iteration 210000
-# [ ] Check if seed is working correctly with an small example
-# [ ] Set a variable of experiment name outside
-# [ ] Send everything to the gpu only for this example (I could have faster executions)
-# I am only using 143MB from 8GB of GPU memory
-# [ ] Check how smoothing works in wandb and check if there is another way to calculate that expected reward
-
 @hydra.main(config_path=".", config_name="config_cartpole", version_base=None)
 def main(cfg: "DictConfig"):
 
@@ -81,7 +73,8 @@ def main(cfg: "DictConfig"):
         project=cfg.logger.project_name,
         config=dict(cfg),
         group=cfg.logger.group_name,
-        name=f"{cfg.exp_name}_{cfg.env.env_name}_{date_str}"
+        name=f"{cfg.exp_name}_{cfg.env.env_name}_{date_str}",
+        mode=cfg.logger.mode,
     )
 
     # Make the components
@@ -335,8 +328,12 @@ def main(cfg: "DictConfig"):
     print("Hyperparameters used:")
     print_hyperparameters(cfg)
 
-    # TODO: Print the hyperparameters used
-    # wandb.finish()
+    # TODO: Saved the model. Check how to save the model and load
+    if cfg.logger.save_model:
+        torch.save(model.state_dict(), f"outputs/models/{cfg.exp_name}_{cfg.env.env_name}_{date_str}.pt")
+
+
+    wandb.finish()
 
 
 if __name__ == "__main__":

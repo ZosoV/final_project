@@ -48,6 +48,8 @@ logger:
   test_interval: 25_000
   num_test_episodes: 3
   video: False
+  mode: "disabled"
+  save_model: False
 
 # Optim
 optim:
