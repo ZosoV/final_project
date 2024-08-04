@@ -136,3 +136,38 @@ def target_distances(representations, rewards, cumulative_gamma):
   reward_diffs = torch.abs(squared_rews - squared_rews_transp)
   target_dist = reward_diffs + cumulative_gamma * next_state_similarities
   return target_dist.detach()
+
+
+@torch.no_grad()
+def current_vs_next_mico_priorities(
+        current_state_representations,
+        next_state_representations,
+        mico_beta):
+
+  base_distances = torch.vmap(cosine_distance, in_dims=(0, 0))(current_state_representations,
+                                                         next_state_representations)
+
+  # Sum along the second dimension and normalize the distance
+  # NOTE: this is practically the first term of U in the paper
+  norm_average = 0.5 * (torch.sum(torch.square(current_state_representations), -1) +
+                        torch.sum(torch.square(next_state_representations), -1))
+  
+  mico_distance = norm_average + mico_beta * base_distances
+  
+  # Repeat the priority to assign the same priority to both
+  # the current and next state
+  return mico_distance.repeat_interleave(2).detach()
+
+@torch.no_grad()
+def all_vs_all_mico_priorities(first_batch_representation, second_batch_representation, mico_beta):
+
+    all_vs_all_mico_distances = representation_distances(
+        first_batch_representation, second_batch_representation, mico_beta)
+    
+    batch_size = first_batch_representation.shape[0]
+
+    # NOTE: Mico distance is a unidimensional tensor with the distances of all the pairs
+    # Apply the reshape to get the distances of all the pairs, and get the mean
+    # of the distances of the current states
+    all_vs_all_mico_distances = all_vs_all_mico_distances.reshape((batch_size,batch_size))
+    return all_vs_all_mico_distances.mean(-1).detach()

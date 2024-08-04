@@ -23,7 +23,9 @@ from torchrl.envs import ExplorationType, set_exploration_type
 from torchrl.modules import EGreedyModule
 from torchrl.objectives import DQNLoss, HardUpdate
 from torchrl.record import VideoRecorder
-from torchrl.data.replay_buffers.samplers import RandomSampler, PrioritizedSampler
+from torchrl.data.replay_buffers.samplers import RandomSampler, PrioritizedSampler #, PrioritizedSliceSampler
+
+from sampler_debug import PrioritizedSliceSampler
 
 # from torchrl.record.loggers import generate_exp_name, get_logger
 from utils_cartpole import eval_model, make_dqn_model, make_env, print_hyperparameters
@@ -74,7 +76,8 @@ def main(cfg: "DictConfig"):
         project=cfg.logger.project_name,
         config=dict(cfg),
         group=cfg.logger.group_name,
-        name=f"{cfg.exp_name}_{cfg.env.env_name}_{date_str}"
+        name=f"{cfg.exp_name}_{cfg.env.env_name}_{date_str}",
+        mode=cfg.logger.mode,
     )
 
     # Make the components
@@ -113,10 +116,19 @@ def main(cfg: "DictConfig"):
     # Create the replay buffer
     if cfg.buffer.prioritized_replay:
         print("Using Prioritized Replay Buffer")
-        sampler = PrioritizedSampler(
+        # sampler = PrioritizedSampler(
+        #     max_capacity=cfg.buffer.buffer_size, 
+        #     alpha=cfg.buffer.alpha, 
+        #     beta=cfg.buffer.beta)
+
+        sampler = PrioritizedSliceSampler(
             max_capacity=cfg.buffer.buffer_size, 
             alpha=cfg.buffer.alpha, 
-            beta=cfg.buffer.beta)
+            beta=cfg.buffer.beta, 
+            traj_key=("collector","traj_ids"), 
+            slice_len=2,
+            # strict_length=False
+            )
     else:
         sampler = RandomSampler()
         
@@ -248,7 +260,7 @@ def main(cfg: "DictConfig"):
 
             # Update the priorities
             if cfg.buffer.prioritized_replay:
-                replay_buffer.update_priority(index=sampled_tensordict['index'], priority = sampled_tensordict['td_error'])
+                replay_buffer.update_priority(index=sampled_tensordict['index'].squeeze(-1), priority = sampled_tensordict['td_error'])
 
             # NOTE: This is only one step (after n-updated steps defined before)
             # the target will update

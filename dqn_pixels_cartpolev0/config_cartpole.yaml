@@ -11,7 +11,7 @@ env:
 
 # collector
 collector:
-  total_frames: 1_000_016      # 5_000_016
+  total_frames: 2_000_016      # 5_000_016
   frames_per_batch: 16
   eps_start: 0.9
   eps_end: 0.01
@@ -38,7 +38,7 @@ buffer:
   scratch_dir: null
   prioritized_replay: False
   alpha: 0.7
-  beta: 0.4
+  beta: 0.5
 
 # logger
 logger:
@@ -48,12 +48,12 @@ logger:
   test_interval: 25_000
   num_test_episodes: 3
   video: False
-  mode: "disabled"
+  mode: "online"
   save_model: False
 
 # Optim
 optim:
-  lr: 0.0005
+  lr: 0.00025
   max_grad_norm: 10
 
 # loss

@@ -142,7 +142,8 @@ def main(cfg: "DictConfig"):
             device="cpu",
         ),
         batch_size=cfg.buffer.batch_size,
-        sampler = sampler
+        sampler = sampler,
+        # priority_key="total_priority"
     )
     
     # Create the loss module
@@ -153,6 +154,7 @@ def main(cfg: "DictConfig"):
         mico_gamma=cfg.loss.mico_gamma,
         mico_beta=cfg.loss.mico_beta,
         mico_weight=cfg.loss.mico_weight,
+        priority_type=cfg.buffer.priority_type
     )
     # loss_module = DQNLoss(
     #     value_network=model,
@@ -209,6 +211,7 @@ def main(cfg: "DictConfig"):
     q_losses = torch.zeros(num_updates, device=device)
     mico_losses = torch.zeros(num_updates, device=device)
     total_losses = torch.zeros(num_updates, device=device)
+    priority_alpha = cfg.buffer.priority_alpha
 
     with loss_module.value_network_params.to_module(loss_module.value_network):
         wandb.watch(loss_module.value_network, log="all")
@@ -287,7 +290,8 @@ def main(cfg: "DictConfig"):
 
             # Update the priorities
             if cfg.buffer.prioritized_replay:
-                replay_buffer.update_priority(index=sampled_tensordict['index'], priority = sampled_tensordict['td_error'])
+                priority = (1 - priority_alpha) * sampled_tensordict["td_error"] + priority_alpha * sampled_tensordict["mico_distance"]
+                replay_buffer.update_priority(index=sampled_tensordict['index'].squeeze(-1), priority = priority)
 
             # NOTE: This is only one step (after n-updated steps defined before)
             # the target will update

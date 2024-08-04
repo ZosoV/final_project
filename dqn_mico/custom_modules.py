@@ -179,7 +179,9 @@ class MICODQNLoss(LossModule):
         reduction: str = None,
         mico_weight: float = 0.5,
         mico_gamma: float = 0.99,
-        mico_beta: float = 0.1
+        mico_beta: float = 0.1,
+        priority_type: str = "all_vs_all",
+        priority_alpha: float = 0.6,
     ) -> None:
         if reduction is None:
             reduction = "mean"
@@ -232,6 +234,7 @@ class MICODQNLoss(LossModule):
         self.mico_weight = mico_weight
         self.mico_gamma = mico_gamma
         self.mico_beta = mico_beta
+        self.priority_type = priority_type
         
         if gamma is not None:
             raise TypeError(_GAMMA_LMBDA_DEPREC_ERROR)
@@ -400,12 +403,6 @@ class MICODQNLoss(LossModule):
         #                                                 target_dist))
         mico_loss = torch.mean(huber_loss(online_dist, target_dist))
 
-        with torch.no_grad():
-            priority_tensor = (pred_val_index - target_value).pow(2)
-            priority_tensor = priority_tensor.unsqueeze(-1)
-        if tensordict.device is not None:
-            priority_tensor = priority_tensor.to(tensordict.device)
-
         # TODO: Calculate the mico priority
 
         # NOTE: online distance calculates the distances all vs all on the current batch 
@@ -420,28 +417,56 @@ class MICODQNLoss(LossModule):
         # same with the next states. So that, it's better to get the target of the whole batch
         # Remember that the even rows are the current states and the odd rows are the next states
         # But here we are gonna use all the batch.
-
-        batch_online_representation = td_online_copy['representation']
         
+        with torch.no_grad():
 
-        mico_distance = metric_utils.representation_distances(
-            batch_online_representation, batch_target_representation, self.mico_beta)
-        
-        batch_size = batch_online_representation.shape[0]
+            # NOTE: IMPORTANT: Check if makes sense to compare online vs target, or only online
+            # or only target
+            if self.priority_type == "current_vs_next":
+                mico_distance = metric_utils.current_vs_next_mico_priorities(
+                    current_state_representations = representations, # online representation of current states
+                    next_state_representations = target_next_r, # target representation of next states
+                    mico_beta = self.mico_beta).unsqueeze(-1)
+            elif self.priority_type == "all_vs_all":
+                # It doesn't require new computations, only reshape and mean
+                mico_distance = metric_utils.all_vs_all_mico_priorities(
+                            first_batch_representation = td_online_copy['representation'],
+                            second_batch_representation = batch_target_representation,
+                            mico_beta = self.mico_beta).unsqueeze(-1)
+            else:
+                raise ValueError("Invalid priority type")
 
-        # Mico distance is a unidimensional tensor with the distances of all the pairs
-        # Apply the reshape to get the distances of all the pairs, and get the mean
-        # of the distances of the current states
-        mico_distance = mico_distance.reshape((batch_size**batch_size))
-        mico_distance = mico_distance.mean(1)
+            td_error_priority = (pred_val_index - target_value).pow(2)
+            td_error_priority = td_error_priority.unsqueeze(-1)
 
-        mico_priority = mico_distance
+            # TODO: Check why I need .unsqueeze(-1) here
+            # NOTE: I prefer to define this in the main loop to don't store too much info in the tensordict
+            # , but I am gonna leave it here
+            # priority_tensor = (1 - self.priority_alpha) * td_error_priority + self.priority_alpha * mico_priority.unsqueeze(-1)
+
+        if tensordict.device is not None:
+            td_error_priority = td_error_priority.to(tensordict.device)
+            mico_distance = mico_distance.to(tensordict.device)
+            # priority_tensor = priority_tensor.to(tensordict.device)
+
+        # tensordict.set(
+        #     "total_priority",
+        #     priority_tensor,
+        #     inplace=True,
+        # )
 
         tensordict.set(
-            self.tensor_keys.priority,
-            priority_tensor,
+            "td_error",
+            td_error_priority,
             inplace=True,
         )
+
+        tensordict.set(
+            "mico_distance",
+            mico_distance,
+            inplace=True,
+        )
+
         td_loss = distance_loss(pred_val_index, target_value, self.loss_function)
         td_loss = _reduce(td_loss, reduction=self.reduction)
 

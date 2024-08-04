@@ -26,16 +26,17 @@ from torchrl.record import VideoRecorder
 from torchrl.data.replay_buffers.samplers import RandomSampler, PrioritizedSampler
 
 # from torchrl.record.loggers import generate_exp_name, get_logger
-from utils_cartpole import eval_model, make_dqn_model, make_env, print_hyperparameters
+from utils_cartpole import (
+    eval_model,
+    make_dqn_model,
+    make_env,
+    print_hyperparameters,
+    update_tensor_dict_next_next_rewards
+)
+from utils_modules import MICODQNLoss
+
 import tempfile
 
-# TODO: TODOS:
-# [ ] Check the parameters of the replay buffer what is happening in the iteration 210000
-# [ ] Check if seed is working correctly with an small example
-# [ ] Set a variable of experiment name outside
-# [ ] Send everything to the gpu only for this example (I could have faster executions)
-# I am only using 143MB from 8GB of GPU memory
-# [ ] Check how smoothing works in wandb and check if there is another way to calculate that expected reward
 
 @hydra.main(config_path=".", config_name="config_cartpole", version_base=None)
 def main(cfg: "DictConfig"):
@@ -54,7 +55,7 @@ def main(cfg: "DictConfig"):
         torch.backends.cudnn.benchmark = False
 
     # Correct for frame_skip # NOTE: additional line
-    frame_skip = 4
+    frame_skip = cfg.collector.frame_skip
     total_frames = cfg.collector.total_frames // frame_skip
     frames_per_batch = cfg.collector.frames_per_batch // frame_skip
     init_random_frames = cfg.collector.init_random_frames // frame_skip
@@ -81,12 +82,13 @@ def main(cfg: "DictConfig"):
         project=cfg.logger.project_name,
         config=dict(cfg),
         group=cfg.logger.group_name,
-        name=f"{cfg.exp_name}_{cfg.env.env_name}_{date_str}"
+        name=f"{cfg.exp_name}_{cfg.env.env_name}_{date_str}",
+        mode=cfg.logger.mode,
     )
 
     # Make the components
     # Policy
-    model = make_dqn_model(cfg.env.env_name, cfg.policy, frame_skip)
+    model = make_dqn_model(cfg.env.env_name, cfg.policy, frame_skip).to(device)
 
 
     # NOTE: annealing_num_steps: number of steps 
@@ -97,7 +99,7 @@ def main(cfg: "DictConfig"):
         eps_init=cfg.collector.eps_start,
         eps_end=cfg.collector.eps_end,
         spec=model.spec,
-    )
+    ).to(device)
     model_explore = TensorDictSequential(
         model,
         greedy_module,
@@ -107,7 +109,7 @@ def main(cfg: "DictConfig"):
     # NOTE: init_random_frames: Number of frames 
     # for which the policy is ignored before it is called.
     collector = SyncDataCollector(
-        create_env_fn=make_env(cfg.env.env_name, frame_skip = 4 , device = device, seed = cfg.env.seed),
+        create_env_fn=make_env(cfg.env.env_name, frame_skip = frame_skip , device = device, seed = cfg.env.seed),
         policy=model_explore,
         frames_per_batch=frames_per_batch,
         total_frames=total_frames,
@@ -141,14 +143,19 @@ def main(cfg: "DictConfig"):
             scratch_dir=scratch_dir,
         ),
         batch_size=cfg.buffer.batch_size,
-        sampler = sampler
+        sampler = sampler,
+        priority_key="total_priority"
     )
     
     # Create the loss module
-    loss_module = DQNLoss(
+    loss_module = MICODQNLoss(
         value_network=model,
         loss_function="l2", 
         delay_value=True, # delay_value=True means we will use a target network
+        mico_beta=cfg.loss.mico_beta,
+        mico_gamma=cfg.loss.mico_gamma,
+        mico_weight=cfg.loss.mico_weight,
+        priority_type=cfg.buffer.priority_type,
     )
     # NOTE: additional line for Atari games
     # loss_module.set_keys(done="end-of-life", terminated="end-of-life")
@@ -167,7 +174,7 @@ def main(cfg: "DictConfig"):
 
     # Create the test environment
     # NOTE: new line
-    test_env = make_env(cfg.env.env_name, frame_skip, device, seed=cfg.env.seed, is_test=True)
+    test_env = make_env(cfg.env.env_name, frame_skip, device, seed=cfg.env.seed)#, is_test=True)
     if cfg.logger.video:
         test_env.insert_transform(
             0,
@@ -191,7 +198,10 @@ def main(cfg: "DictConfig"):
     init_random_frames = init_random_frames
     sampling_start = time.time()
     q_losses = torch.zeros(num_updates, device=device)
-
+    mico_losses = torch.zeros(num_updates, device=device)
+    total_losses = torch.zeros(num_updates, device=device)
+    priority_type = cfg.buffer.priority_type
+    priority_alpha = cfg.buffer.priority_alpha
 
     # NOTE: IMPORTANT: collectors allows me to collect transitions in a different way
     # than the one I am get used to.
@@ -219,6 +229,18 @@ def main(cfg: "DictConfig"):
         current_frames = data.numel() * frame_skip
         collected_frames += current_frames
         greedy_module.step(current_frames)
+
+        # Update data before passing to the replay buffer
+        # NOTE: It's needed to record the next_next_rewards only
+        # for the priority type current vs next
+
+        # NOTE: I need this if I use the distance calculation
+        # using the rewards, but as I am using the online network
+        # I am not using the rewards
+
+        # if priority_type == "current_vs_next":
+        #     data = update_tensor_dict_next_next_rewards(data)
+
         replay_buffer.extend(data)
 
         # Get the number of episodes
@@ -232,7 +254,10 @@ def main(cfg: "DictConfig"):
         # When there are at least one done trajectory in the data batch
         if len(episode_rewards) > 0:
             episode_reward_mean = episode_rewards.mean().item()
-            episode_length = data["next", "step_count"][data["next", "done"]]
+
+            # NOTE: we have to account for the frames with are stacking
+            # This doesn't happen with episode_rewards because it get the cumulative reward
+            episode_length = data["next", "step_count"][data["next", "done"]] * frame_skip
             episode_length_mean = episode_length.sum().item() / len(episode_length)
 
             # NOTE: this log will be updated only if there is a new episode in the current
@@ -259,8 +284,8 @@ def main(cfg: "DictConfig"):
             sampled_tensordict = sampled_tensordict.to(device)
 
             # Also the loss module will use the current and target model to get the q-values
-            loss_td = loss_module(sampled_tensordict)
-            q_loss = loss_td["loss"]
+            loss = loss_module(sampled_tensordict)
+            q_loss = loss["loss"]
             optimizer.zero_grad()
             q_loss.backward()
             torch.nn.utils.clip_grad_norm_(
@@ -270,12 +295,15 @@ def main(cfg: "DictConfig"):
 
             # Update the priorities
             if cfg.buffer.prioritized_replay:
-                replay_buffer.update_priority(index=sampled_tensordict['index'], priority = sampled_tensordict['td_error'])
+                priority = (1 - priority_alpha) * sampled_tensordict["td_error"] + priority_alpha * sampled_tensordict["mico_distance"]
+                replay_buffer.update_priority(index=sampled_tensordict['index'], priority = priority)
 
             # NOTE: This is only one step (after n-updated steps defined before)
             # the target will update
             target_net_updater.step()
-            q_losses[j].copy_(q_loss.detach())
+            q_losses[j].copy_(loss["td_loss"].detach())
+            mico_losses[j].copy_(loss["mico_loss"].detach())
+            total_losses[j].copy_(loss["loss"].detach())
         training_time = time.time() - training_start
 
         # Get and log q-values, loss, epsilon, sampling time and training time
@@ -284,6 +312,8 @@ def main(cfg: "DictConfig"):
                 "train/q_values": (data["action_value"] * data["action"]).sum().item()
                 / frames_per_batch,
                 "train/q_loss": q_losses.mean().item(),
+                "train/mico_loss": mico_losses.mean().item(),
+                "train/total_loss": total_losses.mean().item(),
                 "train/epsilon": greedy_module.eps,
                 # "train/sampling_time": sampling_time,
                 # "train/training_time": training_time,
@@ -332,8 +362,12 @@ def main(cfg: "DictConfig"):
     print("Hyperparameters used:")
     print_hyperparameters(cfg)
 
-    # TODO: Print the hyperparameters used
-    # wandb.finish()
+    # TODO: Saved the model. Check how to save the model and load
+    if cfg.logger.save_model:
+        torch.save(model.state_dict(), f"outputs/models/{cfg.exp_name}_{cfg.env.env_name}_{date_str}.pt")
+
+
+    wandb.finish()
 
 
 if __name__ == "__main__":

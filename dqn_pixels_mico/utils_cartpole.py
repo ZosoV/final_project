@@ -10,11 +10,15 @@ from torchrl.data import CompositeSpec
 from torchrl.envs.libs.gym import GymEnv
 from torchrl.modules import ConvNet, MLP, QValueActor
 from torchrl.record import VideoRecorder
+from tensordict.nn import TensorDictModule
+from utils_modules import MICODQNNetwork
+
 from torchrl.envs import (
     CatFrames,
     DoubleToFloat,
     EndOfLifeTransform,
     GrayScale,
+    CenterCrop,
     GymEnv,
     NoopResetEnv,
     Resize,
@@ -32,7 +36,7 @@ from torchrl.envs import (
 
 
 def make_env(env_name="CartPole-v1", frame_skip = 4, 
-             device="cpu", seed = 0, is_test=False):
+             device="cpu", seed = 0, cropping = True):#, is_test=False):
 
     env = GymEnv(
         env_name,
@@ -45,15 +49,17 @@ def make_env(env_name="CartPole-v1", frame_skip = 4,
     # env.append_transform(NoopResetEnv(noops=30, random=True)) # NOTE: Cartpole with no noops will fall into reset in the begining
                                                                 # I could use an small noop reset to avoid this, but I think is not necesary
                                                                 # in this case. Analyze this later
-    if not is_test:
+    # if not is_test:
         # env.append_transform(EndOfLifeTransform()) # NOTE: Check my environment is not based on lives (so not important)
-        env.append_transform(SignTransform(in_keys=["reward"])) #NOTE: cartpole has no negative rewards
+        # env.append_transform(SignTransform(in_keys=["reward"])) #NOTE: cartpole has no negative rewards
     env.append_transform(ToTensorImage()) 
     env.append_transform(GrayScale())
+    if cropping:
+        env.append_transform(CenterCrop(400, in_keys = ["pixels"]))
     env.append_transform(Resize(84, 84))
     env.append_transform(CatFrames(N=4, dim=-3))
     env.append_transform(RewardSum())
-    env.append_transform(StepCounter(max_steps=4500)) # NOTE: Cartpole-v1 has a max of 500 steps
+    env.append_transform(StepCounter()) # NOTE: Cartpole-v1 has a max of 500 steps
     env.append_transform(DoubleToFloat())
     env.append_transform(VecNorm(in_keys=["pixels"]))
     env.set_seed(seed)
@@ -63,79 +69,44 @@ def make_env(env_name="CartPole-v1", frame_skip = 4,
     # 4 frames each
     return env
 
+def update_tensor_dict_next_next_rewards(tensordict):
+
+    def get_next_next_rewards(rewards, dones):
+        next_next_rewards = rewards.clone().roll(-1, dims=0)
+        next_next_rewards[dones] = 0
+        return next_next_rewards
+
+    next_next_rewards = get_next_next_rewards(tensordict['next','reward'], tensordict['next','done'])
+
+    if tensordict.device is not None:
+        next_next_rewards = next_next_rewards.to(tensordict.device)
+
+    tensordict.set(
+        ("next", "next_reward"),
+        next_next_rewards,
+        inplace=True,
+    )
+
+    # Side effect of the last step. As we cannot get the next_next_reward of the last step
+    # we need to remove it or assign it to a value that we know for sure like in cartpole
+    # will be always be one, and zero if it is done True.
+
+    # NOTE: We comment this part, because we are using the cartpole environment, but 
+    # uncomment and update properly depending the case
+    # if not tensordict['next','done'][-1]:
+    #     # Two options
+    #     # 1. Assign a value
+    #     # next_next_rewards[-1] = 1 # Set according the reward of the env 
+    #                                # in cartpole will be one so I don't need to do anything
+    #                                # in cartpole I don't need even to assign because all are 1
+    #     # 2. Remove that last step to avoid problems
+    #     data = data[:-1] 
+
+    return tensordict
 
 # ====================================================================
 # Model utils
 # --------------------------------------------------------------------
-
-
-class MICODQNNetwork(torch.nn.Module):
-    """The convolutional network used to compute the agent's Q-values."""
-    def __init__(self, 
-                 num_actions,
-                 input_shape, 
-                 num_cells_cnn, 
-                 kernel_sizes, 
-                 strides, 
-                 num_cells_mlp,
-                 activation_class):
-        super(MICODQNNetwork, self).__init__()
-
-        self.activation_class = activation_class()
-        
-        self.num_actions = num_actions
-
-        # Xavier (Glorot) uniform initialization
-        self.initializer = torch.nn.init.xavier_uniform_
-
-        # Convolutional layers
-        self.conv_layers = torch.nn.ModuleList()
-        in_channels = input_shape[0]  # Assuming input has 4 channels (e.g., stack of 4 frames)
-        for out_channels, kernel_size, stride in zip(num_cells_cnn, kernel_sizes, strides):
-            conv_layer = torch.nn.Conv2d(in_channels, out_channels, kernel_size, stride)
-            self.conv_layers.append(conv_layer)
-            in_channels = out_channels
-        
-        # Fully connected layers
-        self.fc_layers = torch.nn.ModuleList()
-
-        cnn_output = self.conv_layers(torch.ones(input_shape)).view(1, -1)
-
-        input_size = cnn_output.shape[-1]  # Adjust this based on your input and conv layers
-        for units in num_cells_mlp:
-            fc_layer = torch.nn.Linear(input_size, units)
-            self.fc_layers.append(fc_layer)
-            input_size = units
-        
-        # Final output layer
-        self.output_layer = torch.nn.Linear(input_size, self.num_actions)
-
-        self._initialize_weights()
-
-    def _initialize_weights(self):
-        for layer in self.conv_layers:
-            self.initializer(layer.weight)
-            if layer.bias is not None:
-                torch.nn.init.zeros_(layer.bias)
-        for layer in self.fc_layers:
-            self.initializer(layer.weight)
-            if layer.bias is not None:
-                torch.nn.init.zeros_(layer.bias)
-        self.initializer(self.output_layer.weight)
-        if self.output_layer.bias is not None:
-            torch.nn.init.zeros_(self.output_layer.bias)
-
-    def forward(self, x):
-        # x = x.float() / 255.0 # Already normalized by VecNorm
-        for conv_layer in self.conv_layers:
-            x = self.activation_class(conv_layer(x))
-        x = x.view(x.size(0), -1)  # Flatten the tensor
-        representation = x
-        for fc_layer in self.fc_layers:
-            x = self.activation_class(fc_layer(x))
-        q_values = self.output_layer(x)
-        return q_values, representation
-
 
 def make_dqn_modules_pixels(proof_environment, policy_cfg):
 
@@ -150,27 +121,30 @@ def make_dqn_modules_pixels(proof_environment, policy_cfg):
     action_spec = env_specs["input_spec", "full_action_spec", "action"]
 
     print(f"Using {policy_cfg.type} for q-net architecture")
+    
     # Define Q-Value Module
     activation_class = getattr(torch.nn, policy_cfg.activation)
-    cnn = ConvNet(
-        activation_class=activation_class,
-        num_cells= list(policy_cfg.cnn_net.num_cells),
+
+    q_net = MICODQNNetwork(
+        input_shape=input_shape,
+        num_outputs=num_actions,
+        num_cells_cnn=list(policy_cfg.cnn_net.num_cells),
         kernel_sizes=list(policy_cfg.cnn_net.kernel_sizes),
         strides=list(policy_cfg.cnn_net.strides),
-    )
-    cnn_output = cnn(torch.ones(input_shape))
-    mlp = MLP(
-        in_features=cnn_output.shape[-1],
+        num_cells_mlp=list(policy_cfg.mlp_net.num_cells),
         activation_class=activation_class,
-        out_features=num_actions,
-        num_cells=policy_cfg.mlp_net.num_cells,
+        use_batch_norm=policy_cfg.use_batch_norm,
     )
+
+    q_net = TensorDictModule(q_net,
+        in_keys=["pixels"], 
+        out_keys=["action_value", "representation"])
 
 
     # NOTE: Do I need CompositeSpec here?
     # I think I only need proof_environment.action_spec
     qvalue_module = QValueActor(
-        module=torch.nn.Sequential(cnn, mlp),
+        module=q_net,
         spec=CompositeSpec(action=action_spec), 
         in_keys=["pixels"],
     )
@@ -182,7 +156,6 @@ def make_dqn_model(env_name, policy_cfg, frame_skip):
     qvalue_module = make_dqn_modules_pixels(proof_environment, policy_cfg)
     del proof_environment
     return qvalue_module
-
 
 # ====================================================================
 # Evaluation utils

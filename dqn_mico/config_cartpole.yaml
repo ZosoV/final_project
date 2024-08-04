@@ -16,7 +16,7 @@ collector:
   eps_start: 1.0
   eps_end: 0.05
   annealing_frames: 150_000
-  init_random_frames: 10_000
+  init_random_frames: 300
 
 # policy
 policy:
@@ -32,9 +32,11 @@ policy:
 buffer:
   buffer_size: 10_000 # Check the paper and the effect of the buffer size to have an intuition
   batch_size: 128
-  prioritized_replay: False
+  prioritized_replay: True
   alpha: 0.7
   beta: 0.4
+  priority_type: "all_vs_all" # "all_vs_all" or "current_vs_next"
+  priority_alpha: 0
 
 # logger
 logger:

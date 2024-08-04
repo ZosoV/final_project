@@ -6,17 +6,18 @@ exp_name: DQN_pixels
 # Environment
 # SEEDS: [118398, 676190, 786456, 171936, 887739, 919409, 711872, 442081, 189061, 117840]
 env:
-  env_name: CartPole-v1
+  env_name: CartPole-v0
   seed: 118398
 
 # collector
 collector:
-  total_frames: 2_000_016
+  total_frames: 2_000_016      # 5_000_016
   frames_per_batch: 16
-  eps_start: 1.0
-  eps_end: 0.05
-  annealing_frames: 150_000
-  init_random_frames: 20_000
+  eps_start: 0.9
+  eps_end: 0.01
+  annealing_frames: 200_000 # 3_600_000
+  init_random_frames: 50_000
+  frame_skip: 2
 
 # policy
 policy:
@@ -28,32 +29,40 @@ policy:
   mlp_net:
     num_cells: [512]  # Number of units per layer
   activation: "ReLU"  # Activation function used in the layers
+  use_batch_norm: False
 
 # buffer
 buffer:
-  buffer_size: 50_000
-  batch_size: 32
+  buffer_size: 100_000
+  batch_size: 128
   scratch_dir: null
   prioritized_replay: False
   alpha: 0.7
-  beta: 0.4
+  beta: 0.5
+  priority_type: "current_vs_next" # "all_vs_all" or "current_vs_next"
+  priority_alpha: 1.
 
 # logger
 logger:
   backend: wandb
-  project_name: dqn_pixels_cartpole
+  project_name: dqn_pixels_cartpolev0
   group_name: null
-  test_interval: 50_000
+  test_interval: 25_000
   num_test_episodes: 3
   video: False
+  mode: "online"
+  save_model: False
 
 # Optim
 optim:
-  lr: 0.00015
+  lr: 0.00025
   max_grad_norm: 10
 
 # loss
 loss:
   gamma: 0.99
-  hard_update_freq: 1_000
+  hard_update_freq: 50
   num_updates: 1
+  mico_weight: 0.01 #0.5
+  mico_beta: 0.1
+  mico_gamma: 0.99

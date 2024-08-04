@@ -29,6 +29,7 @@ policy:
   mlp_net:
     num_cells: [512]  # Number of units per layer
   activation: "ReLU"  # Activation function used in the layers
+  use_batch_norm: False
 
 # buffer
 buffer:
