@@ -11,23 +11,23 @@ env:
 
 # collector
 collector:
-  total_frames: 500_000      # 5_000_016
+  total_frames: 2_000_000      # 5_000_016
   frames_per_batch: 128
-  eps_start: 0.1
-  eps_end: 0.005
-  annealing_frames: 500_000 # 3_600_000
-  init_random_frames: 1_000
+  eps_start: 1.0
+  eps_end: 0.05
+  annealing_frames: 200_000 # 3_600_000
+  init_random_frames: 10_000
   frame_skip: 4
 
 # policy
 policy:
   type: "CNN_MLP"
   cnn_net:
-    num_cells: [32, 64, 128] # number of kernel per layer
-    kernel_sizes: [5, 3, 3]
-    strides: [3, 1, 1] # [10, 7, 7, 128] 7*7*128 -> 64 -> 64 -> 2
+    num_cells: [16, 32, 32] # number of kernel per layer
+    kernel_sizes: [6, 4, 3]
+    strides: [2, 2, 1]
   mlp_net:
-    num_cells: [128, 64]  # Number of units per layer
+    num_cells: [120, 84]  # Number of units per layer
   activation: "ELU"  # Activation function used in the layers
   use_batch_norm: False
 
@@ -53,7 +53,7 @@ logger:
 
 # Optim
 optim:
-  lr: 0.002 # 0.002
+  lr: 0.0005 # 0.002
   max_grad_norm: 10 # Not used
   weight_decay: 0.00001
 

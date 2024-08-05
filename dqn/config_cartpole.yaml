@@ -30,7 +30,7 @@ buffer:
   batch_size: 128
   prioritized_replay: True
   alpha: 0.7
-  beta: 0.4
+  beta: 0.5
 
 # logger
 logger:
@@ -40,7 +40,7 @@ logger:
   test_interval: 25_000
   num_test_episodes: 5
   video: False
-  mode: disabled
+  mode: online
 
 # Optim
 optim:
