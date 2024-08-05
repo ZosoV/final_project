@@ -116,19 +116,19 @@ def main(cfg: "DictConfig"):
     # Create the replay buffer
     if cfg.buffer.prioritized_replay:
         print("Using Prioritized Replay Buffer")
-        # sampler = PrioritizedSampler(
-        #     max_capacity=cfg.buffer.buffer_size, 
-        #     alpha=cfg.buffer.alpha, 
-        #     beta=cfg.buffer.beta)
-
-        sampler = PrioritizedSliceSampler(
+        sampler = PrioritizedSampler(
             max_capacity=cfg.buffer.buffer_size, 
             alpha=cfg.buffer.alpha, 
-            beta=cfg.buffer.beta, 
-            traj_key=("collector","traj_ids"), 
-            slice_len=2,
-            # strict_length=False
-            )
+            beta=cfg.buffer.beta)
+
+        # sampler = PrioritizedSliceSampler(
+        #     max_capacity=cfg.buffer.buffer_size, 
+        #     alpha=cfg.buffer.alpha, 
+        #     beta=cfg.buffer.beta, 
+        #     traj_key=("collector","traj_ids"), 
+        #     slice_len=2,
+        #     # strict_length=False
+        #     )
     else:
         sampler = RandomSampler()
         
