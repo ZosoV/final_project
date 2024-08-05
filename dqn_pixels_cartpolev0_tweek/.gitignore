@@ -1,0 +1,4 @@
+.hydra/
+outputs/
+wandb/
+multirun/

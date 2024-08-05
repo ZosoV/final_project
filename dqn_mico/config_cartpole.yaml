@@ -41,7 +41,7 @@ buffer:
 # logger
 logger:
   backend: wandb
-  project_name: torchrl_example_dqn
+  project_name: dqn_observation_cartpolev1
   group_name: null
   test_interval: 25_000
   num_test_episodes: 5
