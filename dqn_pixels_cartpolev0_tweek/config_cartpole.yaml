@@ -36,7 +36,7 @@ buffer:
   buffer_size: 100_000
   batch_size: 256
   scratch_dir: null
-  prioritized_replay: True
+  prioritized_replay: False
   alpha: 0.7
   beta: 0.5
 
@@ -48,7 +48,7 @@ logger:
   test_interval: 25_000
   num_test_episodes: 3
   video: False
-  mode: "disabled"
+  mode: "online"
   save_model: False
 
 # Optim
