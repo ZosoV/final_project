@@ -24,6 +24,7 @@ from torchrl.modules import EGreedyModule
 from torchrl.objectives import DQNLoss, HardUpdate, SoftUpdate
 from torchrl.record import VideoRecorder
 from torchrl.data.replay_buffers.samplers import RandomSampler, PrioritizedSampler
+from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 
 # from torchrl.record.loggers import generate_exp_name, get_logger
 from utils_cartpole import eval_model, make_dqn_model, make_env, print_hyperparameters
@@ -51,6 +52,7 @@ def main(cfg: "DictConfig"):
     frames_per_batch = cfg.collector.frames_per_batch // frame_skip
     init_random_frames = cfg.collector.init_random_frames // frame_skip
     test_interval = cfg.logger.test_interval // frame_skip
+    lr_step_size = cfg.optim.step_size // frame_skip
 
     device = cfg.device
     if device in ("", None):
@@ -150,13 +152,20 @@ def main(cfg: "DictConfig"):
     
     loss_module.make_value_estimator(gamma=cfg.loss.gamma) # only to change the gamma value
     loss_module = loss_module.to(device) # NOTE: check if need adding
-    # target_net_updater = HardUpdate(
-    #     loss_module, value_network_update_interval=cfg.loss.hard_update_freq
-    # )
-    target_net_updater = SoftUpdate(loss_module, eps=cfg.loss.eps)
+    
+    if cfg.loss.updater_type == "hard":
+        target_net_updater = HardUpdate(
+        loss_module, value_network_update_interval=cfg.loss.hard_update_freq
+    )
+    elif cfg.loss.updater_type == "soft":
+        target_net_updater = SoftUpdate(loss_module, eps=cfg.loss.eps)
+    else:
+        raise ValueError(f"Updater type {cfg.loss.updater_type} not recognized")
+    
 
-    # Create the optimizer
     optimizer = torch.optim.Adam(loss_module.parameters(), lr=cfg.optim.lr, weight_decay=cfg.optim.weight_decay)
+    if cfg.optim.gamma_stepLR and cfg.optim.step_size:
+        scheduler = StepLR(optimizer, step_size=lr_step_size, gamma=cfg.optim.gamma_stepLR)
 
     # Create the logger
     logger = None
@@ -178,10 +187,13 @@ def main(cfg: "DictConfig"):
     total_episodes = 0
     start_time = time.time()
     num_updates = cfg.loss.num_updates
+    grad_clipping = cfg.optim.grad_clipping
     max_grad = cfg.optim.max_grad_norm
     batch_size = cfg.buffer.batch_size
     test_interval = test_interval
     num_test_episodes = cfg.logger.num_test_episodes
+    prioritized_replay = cfg.buffer.prioritized_replay
+    scheduler_activated = cfg.optim.gamma_stepLR and cfg.optim.step_size
     frames_per_batch = frames_per_batch
     pbar = tqdm.tqdm(total=total_frames)
     init_random_frames = init_random_frames
@@ -262,18 +274,21 @@ def main(cfg: "DictConfig"):
             q_loss = loss_td["loss"]
             optimizer.zero_grad()
             q_loss.backward()
-            # torch.nn.utils.clip_grad_norm_(
-            #     list(loss_module.parameters()), max_norm=max_grad
-            # )
+            if grad_clipping:
+                torch.nn.utils.clip_grad_norm_(
+                    list(loss_module.parameters()), max_norm=max_grad
+                )
             optimizer.step()
 
             # Update the priorities
-            if cfg.buffer.prioritized_replay:
+            if prioritized_replay:
                 replay_buffer.update_priority(index=sampled_tensordict['index'], priority = sampled_tensordict['td_error'])
 
             # NOTE: This is only one step (after n-updated steps defined before)
             # the target will update
             target_net_updater.step()
+            if scheduler_activated:
+                scheduler.step()
             q_losses[j].copy_(q_loss.detach())
         training_time = time.time() - training_start
 
@@ -284,6 +299,7 @@ def main(cfg: "DictConfig"):
                 / frames_per_batch,
                 "train/q_loss": q_losses.mean().item(),
                 "train/epsilon": greedy_module.eps,
+                "train/lr": optimizer.param_groups[0]["lr"],
                 # "train/sampling_time": sampling_time,
                 # "train/training_time": training_time,
             }
