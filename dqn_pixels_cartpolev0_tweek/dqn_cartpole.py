@@ -52,7 +52,8 @@ def main(cfg: "DictConfig"):
     frames_per_batch = cfg.collector.frames_per_batch // frame_skip
     init_random_frames = cfg.collector.init_random_frames // frame_skip
     test_interval = cfg.logger.test_interval // frame_skip
-    lr_step_size = cfg.optim.step_size // frame_skip
+    if cfg.optim.scheduler.step_size:
+        scheduler_step_size = cfg.optim.scheduler.step_size // frame_skip
 
     device = cfg.device
     if device in ("", None):
@@ -132,7 +133,7 @@ def main(cfg: "DictConfig"):
 
     replay_buffer = TensorDictReplayBuffer(
         pin_memory=False,
-        prefetch=cfg.loss.num_updates,
+        prefetch=cfg.loss.target_updater.num_updates,
         storage=LazyMemmapStorage( # NOTE: additional line
             max_size=cfg.buffer.buffer_size,
             scratch_dir=scratch_dir,
@@ -153,19 +154,19 @@ def main(cfg: "DictConfig"):
     loss_module.make_value_estimator(gamma=cfg.loss.gamma) # only to change the gamma value
     loss_module = loss_module.to(device) # NOTE: check if need adding
     
-    if cfg.loss.updater_type == "hard":
+    if cfg.loss.target_updater.type == "hard":
         target_net_updater = HardUpdate(
-        loss_module, value_network_update_interval=cfg.loss.hard_update_freq
+        loss_module, value_network_update_interval=cfg.loss.target_updater.hard_update_freq
     )
-    elif cfg.loss.updater_type == "soft":
-        target_net_updater = SoftUpdate(loss_module, eps=cfg.loss.eps)
+    elif cfg.loss.target_updater.type == "soft":
+        target_net_updater = SoftUpdate(loss_module, eps=cfg.loss.target_updater.eps)
     else:
-        raise ValueError(f"Updater type {cfg.loss.updater_type} not recognized")
+        raise ValueError(f"Updater type {cfg.loss.target_updater.type} not recognized")
     
 
     optimizer = torch.optim.Adam(loss_module.parameters(), lr=cfg.optim.lr, weight_decay=cfg.optim.weight_decay)
-    if cfg.optim.gamma_stepLR and cfg.optim.step_size:
-        scheduler = StepLR(optimizer, step_size=lr_step_size, gamma=cfg.optim.gamma_stepLR)
+    if cfg.optim.scheduler.active:
+        scheduler = StepLR(optimizer, step_size=scheduler_step_size, gamma=cfg.optim.scheduler.gamma)
 
     # Create the logger
     logger = None
@@ -186,14 +187,14 @@ def main(cfg: "DictConfig"):
     collected_frames = 0
     total_episodes = 0
     start_time = time.time()
-    num_updates = cfg.loss.num_updates
-    grad_clipping = cfg.optim.grad_clipping
+    num_updates = cfg.loss.target_updater.num_updates
+    grad_clipping = True if cfg.optim.max_grad_norm is not None else False
     max_grad = cfg.optim.max_grad_norm
     batch_size = cfg.buffer.batch_size
     test_interval = test_interval
     num_test_episodes = cfg.logger.num_test_episodes
     prioritized_replay = cfg.buffer.prioritized_replay
-    scheduler_activated = cfg.optim.gamma_stepLR and cfg.optim.step_size
+    scheduler_activated = cfg.optim.scheduler.active
     frames_per_batch = frames_per_batch
     pbar = tqdm.tqdm(total=total_frames)
     init_random_frames = init_random_frames
