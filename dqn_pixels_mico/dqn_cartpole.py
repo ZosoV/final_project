@@ -21,9 +21,10 @@ from torchrl.collectors import SyncDataCollector
 from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer, LazyMemmapStorage
 from torchrl.envs import ExplorationType, set_exploration_type
 from torchrl.modules import EGreedyModule
-from torchrl.objectives import DQNLoss, HardUpdate
+from torchrl.objectives import DQNLoss, HardUpdate, SoftUpdate
 from torchrl.record import VideoRecorder
 from torchrl.data.replay_buffers.samplers import RandomSampler, PrioritizedSampler
+from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 
 # from torchrl.record.loggers import generate_exp_name, get_logger
 from utils_cartpole import (
@@ -60,6 +61,8 @@ def main(cfg: "DictConfig"):
     frames_per_batch = cfg.collector.frames_per_batch // frame_skip
     init_random_frames = cfg.collector.init_random_frames // frame_skip
     test_interval = cfg.logger.test_interval // frame_skip
+    if cfg.optim.scheduler.step_size:
+        scheduler_step_size = cfg.optim.scheduler.step_size // frame_skip
 
     device = cfg.device
     if device in ("", None):
@@ -113,9 +116,11 @@ def main(cfg: "DictConfig"):
         policy=model_explore,
         frames_per_batch=frames_per_batch,
         total_frames=total_frames,
+        exploration_type=ExplorationType.RANDOM,
         device=device,
         storing_device=device,
-        max_frames_per_traj=-1,
+        split_trajs=False,
+        # max_frames_per_traj=-1,
         init_random_frames=init_random_frames,
     )
 
@@ -137,7 +142,7 @@ def main(cfg: "DictConfig"):
 
     replay_buffer = TensorDictReplayBuffer(
         pin_memory=False,
-        prefetch=3,
+        prefetch=8,
         storage=LazyMemmapStorage( # NOTE: additional line
             max_size=cfg.buffer.buffer_size,
             scratch_dir=scratch_dir,
@@ -162,12 +167,21 @@ def main(cfg: "DictConfig"):
     
     loss_module.make_value_estimator(gamma=cfg.loss.gamma) # only to change the gamma value
     loss_module = loss_module.to(device) # NOTE: check if need adding
-    target_net_updater = HardUpdate(
-        loss_module, value_network_update_interval=cfg.loss.hard_update_freq
+    
+    if cfg.loss.target_updater.type == "hard":
+        target_net_updater = HardUpdate(
+        loss_module, value_network_update_interval=cfg.loss.target_updater.hard_update_freq
     )
+    elif cfg.loss.target_updater.type == "soft":
+        target_net_updater = SoftUpdate(loss_module, eps=cfg.loss.target_updater.eps)
+    else:
+        raise ValueError(f"Updater type {cfg.loss.target_updater.type} not recognized")
+    
 
     # Create the optimizer
     optimizer = torch.optim.Adam(loss_module.parameters(), lr=cfg.optim.lr)
+    if cfg.optim.scheduler.active:
+        scheduler = StepLR(optimizer, step_size=scheduler_step_size, gamma=cfg.optim.scheduler.gamma)
 
     # Create the logger
     logger = None
@@ -188,11 +202,14 @@ def main(cfg: "DictConfig"):
     collected_frames = 0
     total_episodes = 0
     start_time = time.time()
-    num_updates = cfg.loss.num_updates
+    num_updates = cfg.loss.target_updater.num_updates
+    grad_clipping = True if cfg.optim.max_grad_norm is not None else False
     max_grad = cfg.optim.max_grad_norm
     batch_size = cfg.buffer.batch_size
     test_interval = test_interval
     num_test_episodes = cfg.logger.num_test_episodes
+    prioritized_replay = cfg.buffer.prioritized_replay
+    scheduler_activated = cfg.optim.scheduler.active
     frames_per_batch = frames_per_batch
     pbar = tqdm.tqdm(total=total_frames)
     init_random_frames = init_random_frames
@@ -288,9 +305,10 @@ def main(cfg: "DictConfig"):
             q_loss = loss["loss"]
             optimizer.zero_grad()
             q_loss.backward()
-            torch.nn.utils.clip_grad_norm_(
-                list(loss_module.parameters()), max_norm=max_grad
-            )
+            if grad_clipping:
+                torch.nn.utils.clip_grad_norm_(
+                    list(loss_module.parameters()), max_norm=max_grad
+                )
             optimizer.step()
 
             # Update the priorities
@@ -301,6 +319,8 @@ def main(cfg: "DictConfig"):
             # NOTE: This is only one step (after n-updated steps defined before)
             # the target will update
             target_net_updater.step()
+            if scheduler_activated:
+                scheduler.step()
             q_losses[j].copy_(loss["td_loss"].detach())
             mico_losses[j].copy_(loss["mico_loss"].detach())
             total_losses[j].copy_(loss["loss"].detach())
@@ -315,6 +335,7 @@ def main(cfg: "DictConfig"):
                 "train/mico_loss": mico_losses.mean().item(),
                 "train/total_loss": total_losses.mean().item(),
                 "train/epsilon": greedy_module.eps,
+                "train/lr": optimizer.param_groups[0]["lr"],
                 # "train/sampling_time": sampling_time,
                 # "train/training_time": training_time,
             }

@@ -1,7 +1,7 @@
   
 device: null
 
-exp_name: DQN_pixels
+exp_name: DQN_pixels_MICO
 
 # Environment
 # SEEDS: [118398, 676190, 786456, 171936, 887739, 919409, 711872, 442081, 189061, 117840]
@@ -11,13 +11,13 @@ env:
 
 # collector
 collector:
-  total_frames: 2_000_016      # 5_000_016
-  frames_per_batch: 16
-  eps_start: 0.9
-  eps_end: 0.01
-  annealing_frames: 200_000 # 3_600_000
-  init_random_frames: 50_000
-  frame_skip: 2
+  total_frames: 1_500_000
+  frames_per_batch: 128
+  eps_start: 0.1
+  eps_end: 0.005
+  annealing_frames: 520_000
+  init_random_frames: 20_000
+  frame_skip: 4
 
 # policy
 policy:
@@ -27,19 +27,19 @@ policy:
     kernel_sizes: [8, 4, 3]
     strides: [4, 2, 1]
   mlp_net:
-    num_cells: [512]  # Number of units per layer
+    num_cells: [64, 64]  # Number of units per layer
   activation: "ReLU"  # Activation function used in the layers
   use_batch_norm: False
 
 # buffer
 buffer:
   buffer_size: 100_000
-  batch_size: 128
+  batch_size: 256
   scratch_dir: null
   prioritized_replay: False
-  alpha: 0.7
-  beta: 0.5
-  priority_type: "current_vs_next" # "all_vs_all" or "current_vs_next"
+  alpha: 0.6
+  beta: 0.4
+  priority_type: "all_vs_all" # "all_vs_all" or "current_vs_next"
   priority_alpha: 1.
 
 # logger
@@ -50,19 +50,32 @@ logger:
   test_interval: 25_000
   num_test_episodes: 3
   video: False
-  mode: "online"
+  mode: "disabled"
   save_model: False
 
 # Optim
 optim:
-  lr: 0.00025
+  lr: 0.0015
   max_grad_norm: 10
+  weight_decay: 0.00001
+  scheduler:
+    active: False
+    type: "stepLR"
+    gamma: 0.1
+    step_size: 500_000
 
 # loss
 loss:
   gamma: 0.99
-  hard_update_freq: 50
-  num_updates: 1
   mico_weight: 0.01 #0.5
   mico_beta: 0.1
   mico_gamma: 0.99
+  target_updater:
+    type: "hard"
+    hard_update_freq: 50  
+    num_updates: 1
+
+  # target_updater:
+  #   type: "soft"
+  #   eps: 0.995 #0.995 # eps = 1 - tau # Check 0.98
+  #   num_updates: 8
