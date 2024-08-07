@@ -55,7 +55,7 @@ logger:
 
 # Optim
 optim:
-  lr: 0.001
+  lr: 0.002
   max_grad_norm: 10
   weight_decay: 0.00001
   scheduler:

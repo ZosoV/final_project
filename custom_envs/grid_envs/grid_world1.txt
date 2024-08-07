@@ -1,5 +1,7 @@
-. . G
-. . .
-x . x
-. . G
-. . .
+x x x x x x x
+x x . . G x x
+x x . . . x x
+x x x . x x x
+x x . . G x x
+x x . . . x x
+x x x x x x x
