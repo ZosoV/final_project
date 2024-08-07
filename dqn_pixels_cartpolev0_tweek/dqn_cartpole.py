@@ -164,7 +164,10 @@ def main(cfg: "DictConfig"):
         raise ValueError(f"Updater type {cfg.loss.target_updater.type} not recognized")
     
 
-    optimizer = torch.optim.Adam(loss_module.parameters(), lr=cfg.optim.lr, weight_decay=cfg.optim.weight_decay)
+    optimizer = torch.optim.Adam(loss_module.parameters(), 
+                                 lr=cfg.optim.lr, #
+                                 weight_decay=cfg.optim.weight_decay
+                                 eps=cfg.optim.eps)
     if cfg.optim.scheduler.active:
         scheduler = StepLR(optimizer, step_size=scheduler_step_size, gamma=cfg.optim.scheduler.gamma)
 
@@ -298,6 +301,7 @@ def main(cfg: "DictConfig"):
             {
                 "train/q_values": (data["action_value"] * data["action"]).sum().item()
                 / frames_per_batch,
+                "train/q_mean_values": data["action_value"].mean().item(),
                 "train/q_loss": q_losses.mean().item(),
                 "train/epsilon": greedy_module.eps,
                 "train/lr": optimizer.param_groups[0]["lr"],

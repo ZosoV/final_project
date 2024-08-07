@@ -331,6 +331,7 @@ def main(cfg: "DictConfig"):
             {
                 "train/q_values": (data["action_value"] * data["action"]).sum().item()
                 / frames_per_batch,
+                "train/q_mean_values": data["action_value"].mean().item(),
                 "train/q_loss": q_losses.mean().item(),
                 "train/mico_loss": mico_losses.mean().item(),
                 "train/total_loss": total_losses.mean().item(),
