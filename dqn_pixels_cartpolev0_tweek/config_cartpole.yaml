@@ -11,7 +11,7 @@ env:
 
 # collector
 collector:
-  total_frames: 2_000_000 
+  total_frames: 1_500_000 
   frames_per_batch: 128
   eps_start: 0.1
   eps_end: 0.005
@@ -36,9 +36,9 @@ buffer:
   buffer_size: 100_000
   batch_size: 256
   scratch_dir: null
-  prioritized_replay: False
-  alpha: 0.7
-  beta: 0.5
+  prioritized_replay: True
+  alpha: 0.6
+  beta: 0.4
 
 # logger
 logger:
@@ -73,3 +73,4 @@ loss:
   # target_updater:
   #   type: "soft"
   #   eps: 0.995 #0.995 # eps = 1 - tau # Check 0.98
+  #   num_updates: 8

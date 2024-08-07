@@ -9,7 +9,18 @@ for seed in "${seeds[@]}"; do
 
     python dqn_cartpole.py -m \
         env.seed=$seed \
-        exp_name=DQN_pixels_baseline
+        loss.target_updater.num_updates=1 \
+        exp_name=DQN_pixels_num_updates_1
+
+    python dqn_cartpole.py -m \
+        env.seed=$seed \
+        exp_name=DQN_pixels_PER_alpha_0_6_beta_0_4
+
+    python dqn_cartpole.py -m \
+        env.seed=$seed \
+        buffer.alpha=0.7 \
+        buffer.beta=0.5 \
+        exp_name=DQN_pixels_PER_alpha_0_7_beta_0_5
 
     # python dqn_cartpole.py -m \
     #     env.seed=$seed \
