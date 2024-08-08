@@ -44,50 +44,46 @@ for seed in "${seeds[@]}"; do
     python dqn_cartpole.py -m \
         env.seed=$seed \
         buffer.prioritized_replay=True \
-        buffer.priority_alpha=0.5 \
+        buffer.mico_priority.priority_weight=0.5 \
+        buffer.alpha=0.6 \
+        buffer.beta=0.4 \
+        exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_4_prweight_0_5
+
+    python dqn_cartpole.py -m \
+        env.seed=$seed \
+        buffer.prioritized_replay=True \
+        buffer.mico_priority.priority_weight=0.5 \
+        buffer.mico_priority.normalize_priorities=True \
+        buffer.alpha=0.6 \
+        buffer.beta=0.4 \
+        exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_4_prweight_0_5_norm_priorities_True
+
+    python dqn_cartpole.py -m \
+        env.seed=$seed \
+        buffer.prioritized_replay=True \
+        buffer.mico_priority.priority_weight=0.5 \
+        buffer.alpha=0.6 \
+        buffer.beta=0.4 \
+        exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_4_prweight_0_5
+
+    python dqn_cartpole.py -m \
+        env.seed=$seed \
+        buffer.prioritized_replay=True \
+        buffer.mico_priority.priority_weight=0.5 \
         buffer.alpha=0.6 \
         buffer.beta=0.4 \
         optim.scheduler.active=True \
-        exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_4_pralpha_0_5_scheduler_True
-
-    # python dqn_cartpole.py -m \
-    #     env.seed=$seed \
-    #     buffer.prioritized_replay=True \
-    #     buffer.priority_alpha=0.5 \
-    #     buffer.alpha=0.7 \
-    #     buffer.beta=0.5 \
-    #     exp_name=DQN_pixels_MICO_aaBPER_alpha_0_7_beta_0_5_pralpha_0_5
+        exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_4_prweight_0_5
 
 
-    # In theory I could increase the beta to account for the bias because of the same MICO loss
+    # In theory, I could increase the beta to account for the bias because of the same MICO loss
     # will encourage exploration later on [Check this. I'm not sure if this is true]
     python dqn_cartpole.py -m \
         env.seed=$seed \
         buffer.prioritized_replay=True \
-        buffer.priority_alpha=0.5 \
+        buffer.mico_priority.priority_weight=0.5 \
         buffer.alpha=0.6 \
         buffer.beta=0.6 \
-        exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_6_pralpha_0_5
-
-    # python dqn_cartpole.py -m \
-    #     env.seed=$seed \
-    #     buffer.prioritized_replay=True \
-    #     buffer.priority_alpha=0.5 \
-    #     buffer.alpha=0.6 \
-    #     buffer.beta=0.4 \
-    #     loss.mico_weight=0.5 \
-    #     exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_4_pralpha_0_5_mico_weight_0_5
-
-    # python dqn_cartpole.py -m \
-    #     env.seed=$seed \
-    #     buffer.prioritized_replay=True \
-    #     buffer.priority_type="current_vs_next" \
-    #     exp_name=DQN_pixels_MICO_cnBPER_alpha_0_6_beta_0_4_priority_1
-
-    # python dqn_cartpole.py -m \
-    #     env.seed=$seed \
-    #     buffer.prioritized_replay=True \
-    #     buffer.priority_type="current_vs_next" \
-    #     buffer.priority_alpha=0.5 \
-    #     exp_name=DQN_pixels_MICO_cnBPER_alpha_0_6_beta_0_4_priority_0_5
+        exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_6_prweight_0_5
+    
 done
