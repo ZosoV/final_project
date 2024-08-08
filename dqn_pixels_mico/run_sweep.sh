@@ -65,7 +65,7 @@ for seed in "${seeds[@]}"; do
         buffer.alpha=0.6 \
         buffer.beta=0.4 \
         optim.scheduler.active=True \
-        exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_4_prweight_0_5
+        exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_4_prweight_0_5_scheduler_True
 
 
     # In theory, I could increase the beta to account for the bias because of the same MICO loss
