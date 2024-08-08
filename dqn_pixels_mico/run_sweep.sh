@@ -78,8 +78,8 @@ for seed in "${seeds[@]}"; do
         buffer.beta=0.6 \
         exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_6_prweight_0_5
 
-    python dqn_cartpole.py -m \
-        env.seed=$seed \
-        exp_name=DQN_pixels_MICO
+    # python dqn_cartpole.py -m \
+    #     env.seed=$seed \
+    #     exp_name=DQN_pixels_MICO
     
 done
