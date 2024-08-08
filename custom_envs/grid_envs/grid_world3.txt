@@ -1,9 +1,11 @@
-.  .  .  .  .  G
-.  .  x  .  .  G
-.  .  x  .  .  G
-.  .  x  .  .  G
-.  .  .  .  .  G
-.  .  x  .  .  G
-.  .  x  .  .  G
-.  .  x  .  .  G
-.  .  .  .  .  G
+x x x x x x x x x x x 
+x . . . . . . . . G x
+x . . . x . . . . G x
+x . . . x . . . . G x
+x . . . x . . . . G x
+x . . . . . . . . G x
+x . . . x . . . . G x
+x . . . x . . . . G x
+x . . . x . . . . G x
+x . . . . . . . . G x
+x x x x x x x x x x x 
