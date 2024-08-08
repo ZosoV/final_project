@@ -37,8 +37,8 @@ buffer:
   batch_size: 256
   scratch_dir: null
   prioritized_replay: False
-  alpha: 0.7
-  beta: 0.5
+  alpha: 0.6
+  beta: 0.4
   priority_type: "all_vs_all" # "all_vs_all" or "current_vs_next"
   priority_alpha: 1.
 
@@ -55,7 +55,7 @@ logger:
 
 # Optim
 optim:
-  lr: 0.002
+  lr: 0.0015
   max_grad_norm: 10
   weight_decay: 0.00001
   scheduler:

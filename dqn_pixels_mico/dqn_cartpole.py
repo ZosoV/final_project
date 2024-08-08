@@ -179,7 +179,10 @@ def main(cfg: "DictConfig"):
     
 
     # Create the optimizer
-    optimizer = torch.optim.Adam(loss_module.parameters(), lr=cfg.optim.lr)
+    optimizer = torch.optim.Adam(loss_module.parameters(), 
+                                 lr=cfg.optim.lr, #
+                                 weight_decay=cfg.optim.weight_decay,
+                                 eps=cfg.optim.eps)
     if cfg.optim.scheduler.active:
         scheduler = StepLR(optimizer, step_size=scheduler_step_size, gamma=cfg.optim.scheduler.gamma)
 
