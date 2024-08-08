@@ -11,7 +11,7 @@ env:
 
 # collector
 collector:
-  total_frames: 1_500_000
+  total_frames: 2_000_000
   frames_per_batch: 128
   eps_start: 0.1
   eps_end: 0.005
