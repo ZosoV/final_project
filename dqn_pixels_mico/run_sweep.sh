@@ -41,30 +41,22 @@ for seed in "${seeds[@]}"; do
 
     # TODO: Try this two in this computer and try the original for more time steps
     # TODO: Try to normalize the distance
-    python dqn_cartpole.py -m \
-        env.seed=$seed \
-        buffer.prioritized_replay=True \
-        buffer.mico_priority.priority_weight=0.5 \
-        buffer.alpha=0.6 \
-        buffer.beta=0.4 \
-        exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_4_prweight_0_5
+    # python dqn_cartpole.py -m \
+    #     env.seed=$seed \
+    #     buffer.prioritized_replay=True \
+    #     buffer.mico_priority.priority_weight=0.5 \
+    #     buffer.alpha=0.6 \
+    #     buffer.beta=0.4 \
+    #     exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_4_prweight_0_5
 
-    python dqn_cartpole.py -m \
-        env.seed=$seed \
-        buffer.prioritized_replay=True \
-        buffer.mico_priority.priority_weight=0.5 \
-        buffer.mico_priority.normalize_priorities=True \
-        buffer.alpha=0.6 \
-        buffer.beta=0.4 \
-        exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_4_prweight_0_5_norm_priorities_True
-
-    python dqn_cartpole.py -m \
-        env.seed=$seed \
-        buffer.prioritized_replay=True \
-        buffer.mico_priority.priority_weight=0.5 \
-        buffer.alpha=0.6 \
-        buffer.beta=0.4 \
-        exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_4_prweight_0_5
+    # python dqn_cartpole.py -m \
+    #     env.seed=$seed \
+    #     buffer.prioritized_replay=True \
+    #     buffer.mico_priority.priority_weight=0.5 \
+    #     buffer.mico_priority.normalize_priorities=True \
+    #     buffer.alpha=0.6 \
+    #     buffer.beta=0.4 \
+    #     exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_4_prweight_0_5_norm_priorities_True
 
     python dqn_cartpole.py -m \
         env.seed=$seed \
@@ -85,5 +77,9 @@ for seed in "${seeds[@]}"; do
         buffer.alpha=0.6 \
         buffer.beta=0.6 \
         exp_name=DQN_pixels_MICO_aaBPER_alpha_0_6_beta_0_6_prweight_0_5
+
+    python dqn_cartpole.py -m \
+        env.seed=$seed \
+        exp_name=DQN_pixels_MICO
     
 done
