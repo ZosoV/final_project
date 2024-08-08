@@ -11,7 +11,7 @@ env:
 
 # collector
 collector:
-  total_frames: 1_500_000 
+  total_frames: 2_000_000 
   frames_per_batch: 128
   eps_start: 0.1
   eps_end: 0.005
@@ -48,7 +48,7 @@ logger:
   test_interval: 25_000
   num_test_episodes: 3
   video: False
-  mode: "online"
+  mode: "online" # "online" or "disabled" ("offline" too but not used)
   save_model: False
 
 # Optim
@@ -56,7 +56,7 @@ optim:
   lr: 0.0015 # 0.002
   max_grad_norm: 10
   weight_decay: 0.00001
-  eps: 1e-08 # default: 1e-08 # rainbow 1.5e-4
+  eps: 1.5e-4 # default: 1e-08 # rainbow 1.5e-4
   scheduler:
     active: False
     type: "stepLR"
@@ -69,7 +69,7 @@ loss:
   target_updater:
     type: "hard"
     hard_update_freq: 50  
-    num_updates: 8
+    num_updates: 1
 
   # target_updater:
   #   type: "soft"

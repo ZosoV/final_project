@@ -39,8 +39,10 @@ buffer:
   prioritized_replay: False
   alpha: 0.6
   beta: 0.4
-  priority_type: "all_vs_all" # "all_vs_all" or "current_vs_next"
-  priority_alpha: 1.
+  mico_priority:
+    priority_type: "all_vs_all" # "all_vs_all" or "current_vs_next"
+    priority_weight: 0.5
+    normalize_priorities: False
 
 # logger
 logger:
@@ -50,7 +52,7 @@ logger:
   test_interval: 25_000
   num_test_episodes: 3
   video: False
-  mode: "online"
+  mode: "online" # "online" or "disabled" ("offline" too but not used)
   save_model: False
 
 # Optim
@@ -58,6 +60,7 @@ optim:
   lr: 0.0015
   max_grad_norm: 10
   weight_decay: 0.00001
+  eps: 1.5e-4 # default: 1e-08 # rainbow 1.5e-4
   scheduler:
     active: False
     type: "stepLR"
@@ -67,9 +70,10 @@ optim:
 # loss
 loss:
   gamma: 0.99
-  mico_weight: 0.01 #0.5
-  mico_beta: 0.1
-  mico_gamma: 0.99
+  mico_loss:
+    mico_weight: 0.01 #0.5
+    mico_beta: 0.1
+    mico_gamma: 0.99
   target_updater:
     type: "hard"
     hard_update_freq: 50  

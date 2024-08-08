@@ -157,10 +157,10 @@ def main(cfg: "DictConfig"):
         value_network=model,
         loss_function="l2", 
         delay_value=True, # delay_value=True means we will use a target network
-        mico_beta=cfg.loss.mico_beta,
-        mico_gamma=cfg.loss.mico_gamma,
-        mico_weight=cfg.loss.mico_weight,
-        priority_type=cfg.buffer.priority_type,
+        mico_beta=cfg.loss.mico_loss.mico_beta,
+        mico_gamma=cfg.loss.mico_loss.mico_gamma,
+        mico_weight=cfg.loss.mico_loss.mico_weight,
+        priority_type=cfg.buffer.mico_priority.priority_type,
     )
     # NOTE: additional line for Atari games
     # loss_module.set_keys(done="end-of-life", terminated="end-of-life")
@@ -220,8 +220,9 @@ def main(cfg: "DictConfig"):
     q_losses = torch.zeros(num_updates, device=device)
     mico_losses = torch.zeros(num_updates, device=device)
     total_losses = torch.zeros(num_updates, device=device)
-    priority_type = cfg.buffer.priority_type
-    priority_alpha = cfg.buffer.priority_alpha
+    priority_type = cfg.buffer.mico_priority.priority_type
+    mico_priority_weight = cfg.buffer.mico_priority.priority_weight
+    normalize_priorities = cfg.buffer.mico_priority.normalize_priorities
 
     # NOTE: IMPORTANT: collectors allows me to collect transitions in a different way
     # than the one I am get used to.
@@ -315,8 +316,15 @@ def main(cfg: "DictConfig"):
             optimizer.step()
 
             # Update the priorities
-            if cfg.buffer.prioritized_replay:
-                priority = (1 - priority_alpha) * sampled_tensordict["td_error"] + priority_alpha * sampled_tensordict["mico_distance"]
+            if prioritized_replay:
+                
+                if normalize_priorities:
+                    # Max-min normalization of the td_error and mico_distance
+                    norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].min()) / (sampled_tensordict["td_error"].max() - sampled_tensordict["td_error"].min())
+                    norm_mico_distance = (sampled_tensordict["mico_distance"] - sampled_tensordict["mico_distance"].min()) / (sampled_tensordict["mico_distance"].max() - sampled_tensordict["mico_distance"].min())
+                    priority = (1 - mico_priority_weight) * norm_td_error + mico_priority_weight * norm_mico_distance
+                else:
+                    priority = (1 - mico_priority_weight) * sampled_tensordict["td_error"] + mico_priority_weight * sampled_tensordict["mico_distance"]
                 replay_buffer.update_priority(index=sampled_tensordict['index'], priority = priority)
 
             # NOTE: This is only one step (after n-updated steps defined before)
