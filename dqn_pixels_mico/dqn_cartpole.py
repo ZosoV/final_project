@@ -250,6 +250,8 @@ def main(cfg: "DictConfig"):
         current_frames = data.numel() * frame_skip
         collected_frames += current_frames
         greedy_module.step(current_frames)
+        if scheduler_activated:
+            scheduler.step(current_frames)
 
         # Update data before passing to the replay buffer
         # NOTE: It's needed to record the next_next_rewards only
@@ -330,8 +332,6 @@ def main(cfg: "DictConfig"):
             # NOTE: This is only one step (after n-updated steps defined before)
             # the target will update
             target_net_updater.step()
-            if scheduler_activated:
-                scheduler.step()
             q_losses[j].copy_(loss["td_loss"].detach())
             mico_losses[j].copy_(loss["mico_loss"].detach())
             total_losses[j].copy_(loss["loss"].detach())

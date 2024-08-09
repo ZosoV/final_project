@@ -27,11 +27,24 @@ from torchrl.data.replay_buffers.samplers import RandomSampler, PrioritizedSampl
 from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 
 # from torchrl.record.loggers import generate_exp_name, get_logger
-from utils_cartpole import eval_model, make_dqn_model, make_env, print_hyperparameters
+from utils_grid_world import eval_model, make_dqn_model, make_env, print_hyperparameters, get_norm_stats
 import tempfile
 
-@hydra.main(config_path=".", config_name="config_cartpole", version_base=None)
+from gymnasium.envs.registration import register
+
+import sys
+import os
+sys.path.insert(0, os.path.abspath('../'))
+
+@hydra.main(config_path=".", config_name="config_gridworld", version_base=None)
 def main(cfg: "DictConfig"):
+
+    # Register the custom environment
+    register(
+        id='GridWorldEnv-v0',
+        entry_point='custom_envs.grid_world:GridWorldEnv',  # Adjust the path to the actual module and class
+        max_episode_steps=200
+    )
 
     # Set seeds for reproducibility
     seed = cfg.env.seed
@@ -46,13 +59,14 @@ def main(cfg: "DictConfig"):
         # if I don't need reproducibility I could comment this line
         torch.backends.cudnn.benchmark = False
 
-    # Correct for frame_skip # NOTE: additional line
-    frame_skip = cfg.collector.frame_skip
+    # Correct for frame_skip 
+    # Always set to 1 for now (no frame skip) because we could loss some states
+    frame_skip = 1
     total_frames = cfg.collector.total_frames // frame_skip
     frames_per_batch = cfg.collector.frames_per_batch // frame_skip
     init_random_frames = cfg.collector.init_random_frames // frame_skip
     test_interval = cfg.logger.test_interval // frame_skip
-    if cfg.optim.scheduler.step_size:
+    if cfg.optim.scheduler.active:
         scheduler_step_size = cfg.optim.scheduler.step_size // frame_skip
 
     device = cfg.device
@@ -80,9 +94,15 @@ def main(cfg: "DictConfig"):
         mode=cfg.logger.mode,
     )
 
+    # Get normalization stats for the environment
+    obs_norm_sd = get_norm_stats()
+
     # Make the components
     # Policy
-    model = make_dqn_model(cfg.env.env_name, cfg.policy, frame_skip).to(device)
+    model = make_dqn_model(cfg.env.env_name,
+                           cfg.policy, 
+                           obs_norm_sd,
+                           cfg.env.grid_file).to(device)
 
 
     # NOTE: annealing_num_steps: number of steps 
@@ -103,7 +123,11 @@ def main(cfg: "DictConfig"):
     # NOTE: init_random_frames: Number of frames 
     # for which the policy is ignored before it is called.
     collector = SyncDataCollector(
-        create_env_fn=make_env(cfg.env.env_name, frame_skip = frame_skip , device = device, seed = cfg.env.seed),
+        create_env_fn=make_env(cfg.env.env_name, 
+                               device = device,
+                               obs_norm_sd = obs_norm_sd,
+                               grid_file=cfg.env.grid_file, 
+                               seed = cfg.env.seed),
         policy=model_explore,
         frames_per_batch=frames_per_batch,
         total_frames=total_frames,
@@ -176,7 +200,11 @@ def main(cfg: "DictConfig"):
 
     # Create the test environment
     # NOTE: new line
-    test_env = make_env(cfg.env.env_name, frame_skip, device, seed=cfg.env.seed)#, is_test=True)
+    test_env = make_env(cfg.env.env_name,
+                        device = device,
+                        obs_norm_sd = obs_norm_sd,
+                        grid_file=cfg.env.grid_file,
+                        seed=cfg.env.seed)#, is_test=True)
     if cfg.logger.video:
         test_env.insert_transform(
             0,
