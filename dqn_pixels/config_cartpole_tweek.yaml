@@ -11,13 +11,13 @@ env:
 
 # collector
 collector:
-  total_frames: 750_000
-  frames_per_batch: 16
+  total_frames: 1_000_000
+  frames_per_batch: 64
   eps_start: 0.1
   eps_end: 0.005
   annealing_frames: 200_000 
   init_random_frames: 20_000
-  frame_skip: 2 # NOTE: frame_skip = stack frames (I use the same value for both)
+  frame_skip: 4 # NOTE: frame_skip = stack frames (I use the same value for both)
 
 # policy
 policy:
@@ -53,7 +53,7 @@ logger:
 
 # Optim
 optim:
-  lr: 0.0000625 #0.00015 # 0.002 # 0.0000625
+  lr: 0.0005 # 0.002 # 0.0000625
   max_grad_norm: 10
   weight_decay: 0.00001
   eps: 1.5e-4 # default: 1e-08 # rainbow 1.5e-4
