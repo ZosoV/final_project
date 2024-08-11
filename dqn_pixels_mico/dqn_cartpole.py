@@ -61,8 +61,12 @@ def main(cfg: "DictConfig"):
     frames_per_batch = cfg.collector.frames_per_batch // frame_skip
     init_random_frames = cfg.collector.init_random_frames // frame_skip
     test_interval = cfg.logger.test_interval // frame_skip
-    if cfg.optim.scheduler.step_size:
+    if cfg.optim.scheduler.active:
         scheduler_step_size = cfg.optim.scheduler.step_size // frame_skip
+        scheduler_step_size = scheduler_step_size // frames_per_batch
+        print(f"Scheduler Activated: {cfg.optim.scheduler.active}")
+        print(f"Number of data batches: {total_frames // frames_per_batch}")
+        print(f"Scheduler Step Size: {scheduler_step_size} with respect to total updates")
 
     device = cfg.device
     if device in ("", None):
@@ -250,8 +254,6 @@ def main(cfg: "DictConfig"):
         current_frames = data.numel() * frame_skip
         collected_frames += current_frames
         greedy_module.step(current_frames)
-        if scheduler_activated:
-            scheduler.step(current_frames)
 
         # Update data before passing to the replay buffer
         # NOTE: It's needed to record the next_next_rewards only
@@ -336,6 +338,12 @@ def main(cfg: "DictConfig"):
             mico_losses[j].copy_(loss["mico_loss"].detach())
             total_losses[j].copy_(loss["loss"].detach())
         training_time = time.time() - training_start
+
+        if scheduler_activated:
+            scheduler.step()
+
+        # Print learning rate
+        print(optimizer.param_groups[0]["lr"])
 
         # Get and log q-values, loss, epsilon, sampling time and training time
         log_info.update(
