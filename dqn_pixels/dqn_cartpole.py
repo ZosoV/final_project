@@ -30,7 +30,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from utils_cartpole import eval_model, make_dqn_model, make_env, print_hyperparameters
 import tempfile
 
-@hydra.main(config_path=".", config_name="config_cartpole", version_base=None)
+@hydra.main(config_path=".", config_name="config_cartpole_tweek", version_base=None)
 def main(cfg: "DictConfig"):
 
     # Set seeds for reproducibility
@@ -52,8 +52,12 @@ def main(cfg: "DictConfig"):
     frames_per_batch = cfg.collector.frames_per_batch // frame_skip
     init_random_frames = cfg.collector.init_random_frames // frame_skip
     test_interval = cfg.logger.test_interval // frame_skip
-    if cfg.optim.scheduler.step_size:
+    if cfg.optim.scheduler.active:
         scheduler_step_size = cfg.optim.scheduler.step_size // frame_skip
+        scheduler_step_size = scheduler_step_size // frames_per_batch
+        print(f"Scheduler Activated: {cfg.optim.scheduler.active}")
+        print(f"Number of data batches: {total_frames // frames_per_batch}")
+        print(f"Scheduler Step Size: {scheduler_step_size}")
 
     device = cfg.device
     if device in ("", None):
@@ -231,8 +235,6 @@ def main(cfg: "DictConfig"):
         current_frames = data.numel() * frame_skip
         collected_frames += current_frames
         greedy_module.step(current_frames)
-        if scheduler_activated:
-            scheduler.step(current_frames)
         replay_buffer.extend(data)
 
         # Get the number of episodes
@@ -295,6 +297,9 @@ def main(cfg: "DictConfig"):
             target_net_updater.step()
             q_losses[j].copy_(q_loss.detach())
         training_time = time.time() - training_start
+
+        if scheduler_activated:
+            scheduler.step()
 
         # Get and log q-values, loss, epsilon, sampling time and training time
         log_info.update(

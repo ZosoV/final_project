@@ -68,6 +68,10 @@ def main(cfg: "DictConfig"):
     test_interval = cfg.logger.test_interval // frame_skip
     if cfg.optim.scheduler.active:
         scheduler_step_size = cfg.optim.scheduler.step_size // frame_skip
+        scheduler_step_size = scheduler_step_size // frames_per_batch
+        print(f"Scheduler Activated: {cfg.optim.scheduler.active}")
+        print(f"Number of data batches: {total_frames // frames_per_batch}")
+        print(f"Scheduler Step Size: {scheduler_step_size} with respect to total updates")
 
     device = cfg.device
     if device in ("", None):
@@ -259,8 +263,6 @@ def main(cfg: "DictConfig"):
         current_frames = data.numel() * frame_skip
         collected_frames += current_frames
         greedy_module.step(current_frames)
-        if scheduler_activated:
-            scheduler.step(current_frames)
         replay_buffer.extend(data)
 
         # Get the number of episodes
@@ -323,6 +325,9 @@ def main(cfg: "DictConfig"):
             target_net_updater.step()
             q_losses[j].copy_(q_loss.detach())
         training_time = time.time() - training_start
+
+        if scheduler_activated:
+            scheduler.step()
 
         # Get and log q-values, loss, epsilon, sampling time and training time
         log_info.update(

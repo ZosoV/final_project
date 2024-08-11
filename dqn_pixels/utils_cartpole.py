@@ -58,7 +58,7 @@ def make_env(env_name="CartPole-v1", frame_skip = 4,
     if cropping:
         env.append_transform(CenterCrop(400, in_keys = ["pixels"]))
     env.append_transform(Resize(84, 84))
-    env.append_transform(CatFrames(N=4, dim=-3))
+    env.append_transform(CatFrames(N=frame_skip, dim=-3))
     env.append_transform(RewardSum())
     env.append_transform(StepCounter()) # NOTE: Cartpole-v1 has a max of 500 steps
     env.append_transform(DoubleToFloat())
