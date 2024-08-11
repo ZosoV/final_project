@@ -11,8 +11,8 @@ env:
 
 # collector
 collector:
-  total_frames: 2_000_000
-  frames_per_batch: 64
+  total_frames: 750_000
+  frames_per_batch: 16
   eps_start: 0.1
   eps_end: 0.005
   annealing_frames: 200_000 
@@ -53,7 +53,7 @@ logger:
 
 # Optim
 optim:
-  lr: 0.0005 # 0.002
+  lr: 0.0000625 #0.00015 # 0.002 # 0.0000625
   max_grad_norm: 10
   weight_decay: 0.00001
   eps: 1.5e-4 # default: 1e-08 # rainbow 1.5e-4
