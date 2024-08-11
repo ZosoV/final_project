@@ -12,12 +12,12 @@ env:
 # collector
 collector:
   total_frames: 2_000_000
-  frames_per_batch: 128
+  frames_per_batch: 32
   eps_start: 0.1
   eps_end: 0.005
   annealing_frames: 200_000 
   init_random_frames: 20_000
-  frame_skip: 2
+  frame_skip: 2 # NOTE: frame_skip = stack frames (I use the same value for both)
 
 # policy
 policy:
@@ -46,7 +46,7 @@ logger:
   project_name: dqn_pixels_cartpolev0
   group_name: null
   test_interval: 25_000
-  num_test_episodes: 3
+  num_test_episodes: 5
   video: False
   mode: "online" # "online" or "disabled" ("offline" too but not used)
   save_model: False
