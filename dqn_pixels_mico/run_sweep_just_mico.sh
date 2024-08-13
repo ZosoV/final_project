@@ -11,10 +11,8 @@ for seed in "${seeds[@]}"; do
 
         python dqn_cartpole.py -m \
             env.seed=$seed \
-            env.buffer.prioritized_replay=True \
-            env.buffer.mico_priority.priority_weight=$priority_weight \
-            exp_name=DQN_pixels_MICO_aaBPER_seed_$seed \
-        
+            exp_name=DQN_pixels_MICO_seed_$seed \
+
     done
     
 done

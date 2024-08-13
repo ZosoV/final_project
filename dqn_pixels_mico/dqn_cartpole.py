@@ -222,6 +222,8 @@ def main(cfg: "DictConfig"):
     init_random_frames = init_random_frames
     sampling_start = time.time()
     q_losses = torch.zeros(num_updates, device=device)
+    mico_distances = torch.zeros(num_updates, device=device)
+    td_errors = torch.zeros(num_updates, device=device)
     mico_losses = torch.zeros(num_updates, device=device)
     total_losses = torch.zeros(num_updates, device=device)
     priority_type = cfg.buffer.mico_priority.priority_type
@@ -265,6 +267,10 @@ def main(cfg: "DictConfig"):
 
         # if priority_type == "current_vs_next":
         #     data = update_tensor_dict_next_next_rewards(data)
+
+        # NOTE: I need to calculate the mico_distance for the current data
+        # to check statistics of the mico_distance
+        data = loss_module.calculate_mico_distance(data)
 
         replay_buffer.extend(data)
 
@@ -337,13 +343,14 @@ def main(cfg: "DictConfig"):
             q_losses[j].copy_(loss["td_loss"].detach())
             mico_losses[j].copy_(loss["mico_loss"].detach())
             total_losses[j].copy_(loss["loss"].detach())
+            mico_distances[j].copy_(sampled_tensordict["mico_distance"].mean().detach())
+            td_errors[j].copy_(sampled_tensordict["td_error"].mean().detach())
         training_time = time.time() - training_start
 
         if scheduler_activated:
             scheduler.step()
 
-        # Print learning rate
-        print(optimizer.param_groups[0]["lr"])
+
 
         # Get and log q-values, loss, epsilon, sampling time and training time
         log_info.update(
@@ -354,12 +361,22 @@ def main(cfg: "DictConfig"):
                 "train/q_loss": q_losses.mean().item(),
                 "train/mico_loss": mico_losses.mean().item(),
                 "train/total_loss": total_losses.mean().item(),
+                "train/batch_avg_mico_distance": mico_distances.mean().item(),
+                "train/batch_avg_td_error": td_errors.mean().item(),
+                "train/buffer_avg_mico_distance": replay_buffer["mico_distance_metadata"].mean().item(),
                 "train/epsilon": greedy_module.eps,
                 "train/lr": optimizer.param_groups[0]["lr"],
                 # "train/sampling_time": sampling_time,
                 # "train/training_time": training_time,
             }
         )
+
+        if cfg.logger.log_buffer_info:
+            log_info.update(
+                {
+                    "train/buffer_mico_distance_dist": wandb.Histogram(replay_buffer["mico_distance_metadata"].numpy()),
+                }
+            )
 
         # Get and log evaluation rewards and eval time
         # NOTE: As I'm using only the model and not the model_explore that will deterministic I think

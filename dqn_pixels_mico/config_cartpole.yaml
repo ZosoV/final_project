@@ -11,8 +11,8 @@ env:
 
 # collector
 collector:
-  total_frames: 2_000_000
-  frames_per_batch: 128
+  total_frames: 1_200_064
+  frames_per_batch: 64
   eps_start: 0.1
   eps_end: 0.005
   annealing_frames: 520_000
@@ -36,13 +36,13 @@ buffer:
   buffer_size: 100_000
   batch_size: 256
   scratch_dir: null
-  prioritized_replay: False
+  prioritized_replay: True
   alpha: 0.6
   beta: 0.4
   mico_priority:
     priority_type: "all_vs_all" # "all_vs_all" or "current_vs_next"
     priority_weight: 0.5
-    normalize_priorities: False
+    normalize_priorities: True
 
 # logger
 logger:
@@ -50,10 +50,11 @@ logger:
   project_name: dqn_pixels_cartpolev0
   group_name: null
   test_interval: 25_000
-  num_test_episodes: 3
+  num_test_episodes: 5
   video: False
   mode: "online" # "online" or "disabled" ("offline" too but not used)
   save_model: False
+  log_buffer_info: True
 
 # Optim
 optim:

@@ -138,6 +138,70 @@ class MICODQNLoss(DQNLoss):
 
         return mico_loss
     
+    def calculate_mico_distance(self, tensordict: TensorDictBase) -> TensorDict:
+        td_online_copy = tensordict.clone(False)
+        with self.value_network_params.to_module(self.value_network):
+            self.value_network(td_online_copy)
+
+        representations = td_online_copy['representation']
+
+        # NOTE: In the code implementation, the author decided to compare the representations of 
+        # the current states above vs all the representation of the current state but evaluated 
+        # in the target_network.
+
+        # Additionally, the next states passed throught the target network are needed for calculate
+        # the target distance. Then, we are gonna pass the whole batch through the target network
+        td_target_copy = tensordict.clone(False)
+        with self.target_value_network_params.to_module(self.value_network):
+            with torch.no_grad():
+                self.value_network(td_target_copy)
+                self.value_network(td_target_copy['next'])
+                target_r = td_target_copy['representation'].detach()
+                target_next_r = td_target_copy['next', 'representation'].detach()
+
+        with torch.no_grad():
+
+            # NOTE: IMPORTANT: Check if makes sense to compare online vs target, or only online
+            # or only target
+            if self.priority_type == "current_vs_next":
+                mico_distance = utils_metric.current_vs_next_mico_priorities(
+                    current_state_representations = representations, # online representation of current states
+                    next_state_representations = target_next_r, # target representation of next states
+                    mico_beta = self.mico_beta)
+            elif self.priority_type == "all_vs_all":
+                # It doesn't require new computations, only reshape and mean
+                # Notice (as we are not collecting trajectories of two anymore)
+                # We already calculate the distance, which is the online distance
+                # NOTE: However there could be other variants as compare
+                # the online vs online
+                # or target vs target
+                online_dist = utils_metric.representation_distances(
+                            representations, target_r, self.mico_beta)
+                        
+                mico_distance = utils_metric.all_vs_all_mico_priorities(
+                            # first_batch_representation = representations,
+                            # second_batch_representation = target_r,
+                            batch_size = representations.shape[0],
+                            mico_beta = self.mico_beta,
+                            distance_tensor=online_dist)
+            else:
+                raise ValueError("Invalid priority type")
+
+
+        # TODO: I don't why an unsqueeze is needed
+        mico_distance = mico_distance.unsqueeze(-1)
+
+        if tensordict.device is not None:
+            mico_distance = mico_distance.to(tensordict.device)
+
+        tensordict.set(
+            "mico_distance_metadata",
+            mico_distance,
+            inplace=True,
+        )
+
+        return tensordict        
+    
 class MICODQNNetwork(torch.nn.Module):
     """The convolutional network used to compute the agent's Q-values."""
     def __init__(self, 

@@ -30,7 +30,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from utils_cartpole import eval_model, make_dqn_model, make_env, print_hyperparameters
 import tempfile
 
-@hydra.main(config_path=".", config_name="config_cartpole_tweek", version_base=None)
+@hydra.main(config_path=".", config_name="config_cartpole", version_base=None)
 def main(cfg: "DictConfig"):
 
     # Set seeds for reproducibility
