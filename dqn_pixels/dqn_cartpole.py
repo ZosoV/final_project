@@ -303,10 +303,16 @@ def main(cfg: "DictConfig"):
             priorities_per_batch[j].copy_(sampled_tensordict["_weight"].mean().detach())
             td_errors[j].copy_(sampled_tensordict["td_error"].mean().detach())
 
+            # Normalize sampled_tensordict["td_error"] to log
+            
+
             if cfg.logger.save_distributions:
+                norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].min()) / (sampled_tensordict["td_error"].max() - sampled_tensordict["td_error"].min())
+
                 log_info.update(
                     {
                         "train/td_error_dist": wandb.Histogram(sampled_tensordict["td_error"].detach().cpu()),
+                        "train/norm_td_error_dist": wandb.Histogram(norm_td_error.detach().cpu()),
                         "train/priority_dist": wandb.Histogram(sampled_tensordict["_weight"].detach().cpu()),
                     }
                 )

@@ -326,13 +326,14 @@ def main(cfg: "DictConfig"):
                 )
             optimizer.step()
 
+
             # Update the priorities
             if prioritized_replay:
-                
+                norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].min()) / (sampled_tensordict["td_error"].max() - sampled_tensordict["td_error"].min())
+                norm_mico_distance = (sampled_tensordict["mico_distance"] - sampled_tensordict["mico_distance"].min()) / (sampled_tensordict["mico_distance"].max() - sampled_tensordict["mico_distance"].min())
+
                 if normalize_priorities:
                     # Max-min normalization of the td_error and mico_distance
-                    norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].min()) / (sampled_tensordict["td_error"].max() - sampled_tensordict["td_error"].min())
-                    norm_mico_distance = (sampled_tensordict["mico_distance"] - sampled_tensordict["mico_distance"].min()) / (sampled_tensordict["mico_distance"].max() - sampled_tensordict["mico_distance"].min())
                     priority = (1 - mico_priority_weight) * norm_td_error + mico_priority_weight * norm_mico_distance
                 else:
                     priority = (1 - mico_priority_weight) * sampled_tensordict["td_error"] + mico_priority_weight * sampled_tensordict["mico_distance"]
@@ -351,11 +352,16 @@ def main(cfg: "DictConfig"):
             td_errors[j].copy_(sampled_tensordict["td_error"].mean().detach())
 
             if cfg.logger.save_distributions:
+                norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].min()) / (sampled_tensordict["td_error"].max() - sampled_tensordict["td_error"].min())
+                norm_mico_distance = (sampled_tensordict["mico_distance"] - sampled_tensordict["mico_distance"].min()) / (sampled_tensordict["mico_distance"].max() - sampled_tensordict["mico_distance"].min())
+
                 log_info.update(
                     {
                         "train/td_error_dist": wandb.Histogram(sampled_tensordict["td_error"].detach().cpu()),
                         "train/mico_distance_dist": wandb.Histogram(sampled_tensordict["mico_distance"].detach().cpu()),
                         "train/priority_dist": wandb.Histogram(sampled_tensordict["_weight"].detach().cpu()),
+                        "train/norm_td_error_dist": wandb.Histogram(norm_td_error.detach().cpu()),
+                        "train/norm_mico_distance_dist": wandb.Histogram(norm_mico_distance.detach().cpu()),
                     }
                 )
 
