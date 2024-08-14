@@ -6,14 +6,14 @@ exp_name: DQN_pixels
 # Environment
 # SEEDS: [118398, 676190, 786456, 171936, 887739, 919409, 711872, 442081, 189061, 117840]
 env:
-  env_name: CartPole-v1
+  env_name: CartPole-v0
   seed: 118398
 
 # collector
 collector:
-  total_frames: 1_200_064 
+  total_frames: 1_100_064 
   frames_per_batch: 64
-  eps_start: 0.1
+  eps_start: 0.1 # Set a small exploration to check if the MICO is encouraging exploration (No at least I have to see the experiences)
   eps_end: 0.005
   annealing_frames: 520_000 
   init_random_frames: 20_000
