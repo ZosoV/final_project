@@ -13,7 +13,7 @@ env:
 collector:
   total_frames: 1_100_064 
   frames_per_batch: 64
-  eps_start: 0.1 # Set a small exploration to check if the MICO is encouraging exploration (No at least I have to see the experiences)
+  eps_start: 0.5 # Set a small exploration to check if the MICO is encouraging exploration (No at least I have to see the experiences)
   eps_end: 0.005
   annealing_frames: 520_000 
   init_random_frames: 20_000
@@ -50,7 +50,8 @@ logger:
   video: False
   mode: "online" # "online" or "disabled" ("offline" too but not used)
   save_model: False
-
+  save_distributions: True
+  
 # Optim
 optim:
   lr: 0.0015 # 0.002

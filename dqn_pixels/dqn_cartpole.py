@@ -323,6 +323,8 @@ def main(cfg: "DictConfig"):
                 / frames_per_batch,
                 "train/q_mean_values": data["action_value"].mean().item(),
                 "train/q_loss": q_losses.mean().item(),
+                "train/batch_avg_td_error": td_errors.mean().item(),
+                "train/batch_avg_priority": priorities_per_batch.mean().item(),
                 "train/epsilon": greedy_module.eps,
                 "train/lr": optimizer.param_groups[0]["lr"],
                 # "train/sampling_time": sampling_time,

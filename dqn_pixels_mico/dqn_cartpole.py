@@ -224,6 +224,7 @@ def main(cfg: "DictConfig"):
     q_losses = torch.zeros(num_updates, device=device)
     mico_distances = torch.zeros(num_updates, device=device)
     td_errors = torch.zeros(num_updates, device=device)
+    priorities_per_batch = torch.zeros(num_updates, device=device)
     mico_losses = torch.zeros(num_updates, device=device)
     total_losses = torch.zeros(num_updates, device=device)
     priority_type = cfg.buffer.mico_priority.priority_type
@@ -270,7 +271,7 @@ def main(cfg: "DictConfig"):
 
         # NOTE: I need to calculate the mico_distance for the current data
         # to check statistics of the mico_distance
-        data = loss_module.calculate_mico_distance(data)
+        # data = loss_module.calculate_mico_distance(data)
 
         replay_buffer.extend(data)
 
@@ -343,8 +344,21 @@ def main(cfg: "DictConfig"):
             q_losses[j].copy_(loss["td_loss"].detach())
             mico_losses[j].copy_(loss["mico_loss"].detach())
             total_losses[j].copy_(loss["loss"].detach())
+
+            # Priorities infor to log
             mico_distances[j].copy_(sampled_tensordict["mico_distance"].mean().detach())
+            priorities_per_batch[j].copy_(sampled_tensordict["_weight"].mean().detach())
             td_errors[j].copy_(sampled_tensordict["td_error"].mean().detach())
+
+            if cfg.logger.save_distributions:
+                log_info.update(
+                    {
+                        "train/td_error_dist": wandb.Histogram(sampled_tensordict["td_error"].detach().cpu()),
+                        "train/mico_distance_dist": wandb.Histogram(sampled_tensordict["mico_distance"].detach().cpu()),
+                        "train/priority_dist": wandb.Histogram(sampled_tensordict["_weight"].detach().cpu()),
+                    }
+                )
+
         training_time = time.time() - training_start
 
         if scheduler_activated:
@@ -363,7 +377,8 @@ def main(cfg: "DictConfig"):
                 "train/total_loss": total_losses.mean().item(),
                 "train/batch_avg_mico_distance": mico_distances.mean().item(),
                 "train/batch_avg_td_error": td_errors.mean().item(),
-                "train/buffer_avg_mico_distance": replay_buffer["mico_distance_metadata"].mean().item(),
+                "train/batch_avg_priority": priorities_per_batch.mean().item(),
+                # "train/buffer_avg_mico_distance": replay_buffer["mico_distance_metadata"].mean().item(),
                 "train/epsilon": greedy_module.eps,
                 "train/lr": optimizer.param_groups[0]["lr"],
                 # "train/sampling_time": sampling_time,
@@ -371,12 +386,12 @@ def main(cfg: "DictConfig"):
             }
         )
 
-        if cfg.logger.log_buffer_info:
-            log_info.update(
-                {
-                    "train/buffer_mico_distance_dist": wandb.Histogram(replay_buffer["mico_distance_metadata"].numpy()),
-                }
-            )
+        # if cfg.logger.log_buffer_info:
+        #     log_info.update(
+        #         {
+        #             "train/buffer_mico_distance_dist": wandb.Histogram(replay_buffer["mico_distance_metadata"].detach()),
+        #         }
+        #     )
 
         # Get and log evaluation rewards and eval time
         # NOTE: As I'm using only the model and not the model_explore that will deterministic I think
