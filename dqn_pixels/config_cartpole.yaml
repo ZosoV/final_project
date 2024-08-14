@@ -33,10 +33,10 @@ policy:
 
 # buffer
 buffer:
-  buffer_size: 10_000
+  buffer_size: 100_000
   batch_size: 256
   scratch_dir: null
-  prioritized_replay: True
+  prioritized_replay: False
   alpha: 0.6
   beta: 0.4
 
@@ -50,7 +50,7 @@ logger:
   video: False
   mode: "online" # "online" or "disabled" ("offline" too but not used)
   save_model: False
-  save_distributions: True
+  save_distributions: False
   
 # Optim
 optim:

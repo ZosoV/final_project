@@ -307,15 +307,20 @@ def main(cfg: "DictConfig"):
             
 
             if cfg.logger.save_distributions:
-                # normalize the td_error to log with z-score
-                # norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].mean()) / sampled_tensordict["td_error"].std()
-                # norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].min()) / (sampled_tensordict["td_error"].max() - sampled_tensordict["td_error"].min())
-                norm_td_error = torch.log(sampled_tensordict["td_error"] + 1)
+                log_td_error = torch.log(sampled_tensordict["td_error"] + 1)
+                norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].mean()) / sampled_tensordict["td_error"].std()
+                log_weight = torch.log(sampled_tensordict["_weight"] + 1)
+                norm_weight = (sampled_tensordict["_weight"] - sampled_tensordict["_weight"].mean()) / sampled_tensordict["_weight"].std()
+
+
                 log_info.update(
                     {
                         "train/td_error_dist": wandb.Histogram(sampled_tensordict["td_error"].detach().cpu()),
+                        "train/log_td_error_dist": wandb.Histogram(log_td_error.detach().cpu()),
                         "train/norm_td_error_dist": wandb.Histogram(norm_td_error.detach().cpu()),
-                        "train/priority_dist": wandb.Histogram(sampled_tensordict["_weight"].detach().cpu()),
+                        "train/weight_dist": wandb.Histogram(sampled_tensordict["_weight"].detach().cpu()),
+                        "train/log_weight_dist": wandb.Histogram(log_weight.detach().cpu()),
+                        "train/norm_weight_dist": wandb.Histogram(norm_weight.detach().cpu()),
                     }
                 )
             

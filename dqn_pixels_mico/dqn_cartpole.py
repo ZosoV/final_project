@@ -225,6 +225,7 @@ def main(cfg: "DictConfig"):
     mico_distances = torch.zeros(num_updates, device=device)
     td_errors = torch.zeros(num_updates, device=device)
     priorities_per_batch = torch.zeros(num_updates, device=device)
+    weights_per_batch = torch.zeros(num_updates, device=device)
     mico_losses = torch.zeros(num_updates, device=device)
     total_losses = torch.zeros(num_updates, device=device)
     priority_type = cfg.buffer.mico_priority.priority_type
@@ -348,20 +349,46 @@ def main(cfg: "DictConfig"):
 
             # Priorities infor to log
             mico_distances[j].copy_(sampled_tensordict["mico_distance"].mean().detach())
-            priorities_per_batch[j].copy_(sampled_tensordict["_weight"].mean().detach())
             td_errors[j].copy_(sampled_tensordict["td_error"].mean().detach())
+            priorities_per_batch[j].copy_(priority.mean().detach())
+            weights_per_batch[j].copy_(sampled_tensordict["_weight"].mean().detach())
 
             if cfg.logger.save_distributions:
-                norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].min()) / (sampled_tensordict["td_error"].max() - sampled_tensordict["td_error"].min())
-                norm_mico_distance = (sampled_tensordict["mico_distance"] - sampled_tensordict["mico_distance"].min()) / (sampled_tensordict["mico_distance"].max() - sampled_tensordict["mico_distance"].min())
+                norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].mean()) / sampled_tensordict["td_error"].std()
+                log_td_error = torch.log(sampled_tensordict["td_error"] + 1)
 
+                norm_mico_distance = (sampled_tensordict["mico_distance"] - sampled_tensordict["mico_distance"].mean()) / sampled_tensordict["mico_distance"].std()
+                log_mico_distance = torch.log(sampled_tensordict["mico_distance"] + 1)
+
+                if normalize_priorities:
+                    # Max-min normalization of the td_error and mico_distance
+                    max_min_norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].min()) / (sampled_tensordict["td_error"].max() - sampled_tensordict["td_error"].min())
+                    max_mim_norm_mico_distance = (sampled_tensordict["mico_distance"] - sampled_tensordict["mico_distance"].min()) / (sampled_tensordict["mico_distance"].max() - sampled_tensordict["mico_distance"].min())
+                    priority = (1 - mico_priority_weight) * max_min_norm_td_error + mico_priority_weight * max_mim_norm_mico_distance
+                else:
+                    priority = (1 - mico_priority_weight) * sampled_tensordict["td_error"] + mico_priority_weight * sampled_tensordict["mico_distance"]
+
+                
+                norm_priority = (priority - priority.mean()) / priority.std()
+                log_priority = torch.log(priority + 1)
+
+                log_weight = torch.log(sampled_tensordict["_weight"] + 1)
+                norm_weight = (sampled_tensordict["_weight"] - sampled_tensordict["_weight"].mean()) / sampled_tensordict["_weight"].std()
+                
                 log_info.update(
                     {
                         "train/td_error_dist": wandb.Histogram(sampled_tensordict["td_error"].detach().cpu()),
-                        "train/mico_distance_dist": wandb.Histogram(sampled_tensordict["mico_distance"].detach().cpu()),
-                        "train/priority_dist": wandb.Histogram(sampled_tensordict["_weight"].detach().cpu()),
+                        "train/log_td_error_dist": wandb.Histogram(log_td_error.detach().cpu()),
                         "train/norm_td_error_dist": wandb.Histogram(norm_td_error.detach().cpu()),
+                        "train/mico_distance_dist": wandb.Histogram(sampled_tensordict["mico_distance"].detach().cpu()),
+                        "train/log_mico_distance_dist": wandb.Histogram(log_mico_distance.detach().cpu()),
                         "train/norm_mico_distance_dist": wandb.Histogram(norm_mico_distance.detach().cpu()),
+                        "train/weight_dist": wandb.Histogram(sampled_tensordict["_weight"].detach().cpu()),
+                        "train/log_weight_dist": wandb.Histogram(log_weight.detach().cpu()),
+                        "train/norm_weight_dist": wandb.Histogram(norm_weight.detach().cpu()),
+                        "train/priority_dist": wandb.Histogram(priority.detach().cpu()),
+                        "train/log_priority_dist": wandb.Histogram(log_priority.detach().cpu()),
+                        "train/norm_priority_dist": wandb.Histogram(norm_priority.detach().cpu()),
                     }
                 )
 
