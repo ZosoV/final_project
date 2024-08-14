@@ -207,6 +207,8 @@ def main(cfg: "DictConfig"):
     init_random_frames = init_random_frames
     sampling_start = time.time()
     q_losses = torch.zeros(num_updates, device=device)
+    td_errors = torch.zeros(num_updates, device=device)
+    priorities_per_batch = torch.zeros(num_updates, device=device)
 
 
     # NOTE: IMPORTANT: collectors allows me to collect transitions in a different way
@@ -296,6 +298,19 @@ def main(cfg: "DictConfig"):
             # the target will update
             target_net_updater.step()
             q_losses[j].copy_(q_loss.detach())
+
+            # Priorities infor to log
+            priorities_per_batch[j].copy_(sampled_tensordict["_weight"].mean().detach())
+            td_errors[j].copy_(sampled_tensordict["td_error"].mean().detach())
+
+            if cfg.logger.save_distributions:
+                log_info.update(
+                    {
+                        "train/td_error_dist": wandb.Histogram(sampled_tensordict["td_error"].detach().cpu()),
+                        "train/priority_dist": wandb.Histogram(sampled_tensordict["_weight"].detach().cpu()),
+                    }
+                )
+            
         training_time = time.time() - training_start
 
         if scheduler_activated:
