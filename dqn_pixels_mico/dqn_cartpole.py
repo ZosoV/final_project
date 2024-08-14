@@ -350,8 +350,10 @@ def main(cfg: "DictConfig"):
             # Priorities infor to log
             mico_distances[j].copy_(sampled_tensordict["mico_distance"].mean().detach())
             td_errors[j].copy_(sampled_tensordict["td_error"].mean().detach())
-            priorities_per_batch[j].copy_(priority.mean().detach())
-            weights_per_batch[j].copy_(sampled_tensordict["_weight"].mean().detach())
+            
+            if prioritized_replay:
+                priorities_per_batch[j].copy_(priority.mean().detach())
+                weights_per_batch[j].copy_(sampled_tensordict["_weight"].mean().detach())
 
             if cfg.logger.save_distributions:
                 norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].mean()) / sampled_tensordict["td_error"].std()

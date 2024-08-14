@@ -47,12 +47,12 @@ buffer:
 # logger
 logger:
   backend: wandb
-  project_name: dqn_pixels_cartpolev0
+  project_name: dqn_pixels_cartpolev0_sweep
   group_name: null
   test_interval: 25_000
   num_test_episodes: 5
   video: False
-  mode: "online" # "online" or "disabled" ("offline" too but not used)
+  mode: "disabled" # "online" or "disabled" ("offline" too but not used)
   save_model: False
   save_distributions: False
 
