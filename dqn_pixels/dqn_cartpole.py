@@ -307,8 +307,10 @@ def main(cfg: "DictConfig"):
             
 
             if cfg.logger.save_distributions:
-                norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].min()) / (sampled_tensordict["td_error"].max() - sampled_tensordict["td_error"].min())
-
+                # normalize the td_error to log with z-score
+                # norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].mean()) / sampled_tensordict["td_error"].std()
+                # norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].min()) / (sampled_tensordict["td_error"].max() - sampled_tensordict["td_error"].min())
+                norm_td_error = torch.log(sampled_tensordict["td_error"] + 1)
                 log_info.update(
                     {
                         "train/td_error_dist": wandb.Histogram(sampled_tensordict["td_error"].detach().cpu()),
