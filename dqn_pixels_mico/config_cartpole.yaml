@@ -11,8 +11,8 @@ env:
 
 # collector
 collector:
-  total_frames: 1_100_064
-  frames_per_batch: 64
+  total_frames: 1_000_064
+  frames_per_batch: 128
   eps_start: 0.5
   eps_end: 0.005
   annealing_frames: 520_000
@@ -42,7 +42,7 @@ buffer:
   mico_priority:
     priority_type: "all_vs_all" # "all_vs_all" or "current_vs_next"
     priority_weight: 1.0
-    normalize_priorities: False
+    normalize_priorities: True
 
 # logger
 logger:
@@ -52,7 +52,7 @@ logger:
   test_interval: 25_000
   num_test_episodes: 5
   video: False
-  mode: "disabled" # "online" or "disabled" ("offline" too but not used)
+  mode: "online" # "online" or "disabled" ("offline" too but not used)
   save_model: False
   save_distributions: False
 

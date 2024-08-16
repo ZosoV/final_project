@@ -330,11 +330,12 @@ def main(cfg: "DictConfig"):
 
             # Update the priorities
             if prioritized_replay:
-                norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].min()) / (sampled_tensordict["td_error"].max() - sampled_tensordict["td_error"].min())
-                norm_mico_distance = (sampled_tensordict["mico_distance"] - sampled_tensordict["mico_distance"].min()) / (sampled_tensordict["mico_distance"].max() - sampled_tensordict["mico_distance"].min())
-
+                # norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].min()) / (sampled_tensordict["td_error"].max() - sampled_tensordict["td_error"].min())
+                # norm_mico_distance = (sampled_tensordict["mico_distance"] - sampled_tensordict["mico_distance"].min()) / (sampled_tensordict["mico_distance"].max() - sampled_tensordict["mico_distance"].min())
+                norm_td_error = torch.log(sampled_tensordict["td_error"] + 1)
+                norm_mico_distance = torch.log(sampled_tensordict["mico_distance"] + 1)
+                
                 if normalize_priorities:
-                    # Max-min normalization of the td_error and mico_distance
                     priority = (1 - mico_priority_weight) * norm_td_error + mico_priority_weight * norm_mico_distance
                 else:
                     priority = (1 - mico_priority_weight) * sampled_tensordict["td_error"] + mico_priority_weight * sampled_tensordict["mico_distance"]
@@ -356,6 +357,8 @@ def main(cfg: "DictConfig"):
                 weights_per_batch[j].copy_(sampled_tensordict["_weight"].mean().detach())
 
             if cfg.logger.save_distributions:
+                # NOTE: Have in mind that if you use normalized priorities you are getting
+                # the log twice so it's better to get with no normalized priorities
                 norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].mean()) / sampled_tensordict["td_error"].std()
                 log_td_error = torch.log(sampled_tensordict["td_error"] + 1)
 
@@ -413,6 +416,7 @@ def main(cfg: "DictConfig"):
                 "train/batch_avg_mico_distance": mico_distances.mean().item(),
                 "train/batch_avg_td_error": td_errors.mean().item(),
                 "train/batch_avg_priority": priorities_per_batch.mean().item(),
+                "train/batch_avg_weight": weights_per_batch.mean().item(),
                 # "train/buffer_avg_mico_distance": replay_buffer["mico_distance_metadata"].mean().item(),
                 "train/epsilon": greedy_module.eps,
                 "train/lr": optimizer.param_groups[0]["lr"],

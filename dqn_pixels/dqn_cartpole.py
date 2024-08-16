@@ -23,7 +23,8 @@ from torchrl.envs import ExplorationType, set_exploration_type
 from torchrl.modules import EGreedyModule
 from torchrl.objectives import DQNLoss, HardUpdate, SoftUpdate
 from torchrl.record import VideoRecorder
-from torchrl.data.replay_buffers.samplers import RandomSampler, PrioritizedSampler
+from torchrl.data.replay_buffers.samplers import RandomSampler #, PrioritizedSampler
+from torchrl.data.replay_buffers import PrioritizedSampler
 from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 
 # from torchrl.record.loggers import generate_exp_name, get_logger
@@ -209,7 +210,7 @@ def main(cfg: "DictConfig"):
     q_losses = torch.zeros(num_updates, device=device)
     td_errors = torch.zeros(num_updates, device=device)
     priorities_per_batch = torch.zeros(num_updates, device=device)
-
+    weights_per_batch = torch.zeros(num_updates, device=device)
 
     # NOTE: IMPORTANT: collectors allows me to collect transitions in a different way
     # than the one I am get used to.
@@ -292,19 +293,18 @@ def main(cfg: "DictConfig"):
 
             # Update the priorities
             if prioritized_replay:
-                replay_buffer.update_priority(index=sampled_tensordict['index'], priority = sampled_tensordict['td_error'])
-
+                priority = sampled_tensordict['td_error']
+                replay_buffer.update_priority(index=sampled_tensordict['index'], priority = priority)
+                
+                # NOTE: The original TD_error doesn't use any normalization
+                # I only log to get the results in the same scale for comparison
+                priorities_per_batch[j].copy_(torch.log(1 + priority).mean().detach())
+                weights_per_batch[j].copy_(sampled_tensordict["_weight"].mean().detach())
             # NOTE: This is only one step (after n-updated steps defined before)
             # the target will update
             target_net_updater.step()
             q_losses[j].copy_(q_loss.detach())
-
-            # Priorities infor to log
-            priorities_per_batch[j].copy_(sampled_tensordict["_weight"].mean().detach())
             td_errors[j].copy_(sampled_tensordict["td_error"].mean().detach())
-
-            # Normalize sampled_tensordict["td_error"] to log
-            
 
             if cfg.logger.save_distributions:
                 log_td_error = torch.log(sampled_tensordict["td_error"] + 1)
@@ -338,6 +338,7 @@ def main(cfg: "DictConfig"):
                 "train/q_loss": q_losses.mean().item(),
                 "train/batch_avg_td_error": td_errors.mean().item(),
                 "train/batch_avg_priority": priorities_per_batch.mean().item(),
+                "train/batch_avg_weight": weights_per_batch.mean().item(),
                 "train/epsilon": greedy_module.eps,
                 "train/lr": optimizer.param_groups[0]["lr"],
                 # "train/sampling_time": sampling_time,

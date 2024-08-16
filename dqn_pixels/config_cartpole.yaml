@@ -11,8 +11,8 @@ env:
 
 # collector
 collector:
-  total_frames: 1_100_064 
-  frames_per_batch: 64
+  total_frames: 1_000_064 
+  frames_per_batch: 128
   eps_start: 0.5 # Set a small exploration to check if the MICO is encouraging exploration (No at least I have to see the experiences)
   eps_end: 0.005
   annealing_frames: 520_000 
