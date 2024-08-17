@@ -37,7 +37,7 @@ from utils_modules import DQNNetwork
 
 
 def make_env(env_name="CartPole-v1", frame_skip = 4, 
-             device="cpu", seed = 0, cropping = True):#, is_test=False):
+             device="cpu", seed = 0, cropping = False):#, is_test=False):
 
     env = GymEnv(
         env_name,

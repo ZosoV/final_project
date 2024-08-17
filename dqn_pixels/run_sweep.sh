@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-seeds=(118398 676190 786456) #171936 887739)
+seeds=(118398) # 676190 786456) #171936 887739)
 
 # Loop over each seed
 for seed in "${seeds[@]}"; do

@@ -31,6 +31,10 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from utils_cartpole import eval_model, make_dqn_model, make_env, print_hyperparameters
 import tempfile
 
+
+from collections import deque
+
+
 @hydra.main(config_path=".", config_name="config_cartpole", version_base=None)
 def main(cfg: "DictConfig"):
 
@@ -212,6 +216,13 @@ def main(cfg: "DictConfig"):
     priorities_per_batch = torch.zeros(num_updates, device=device)
     weights_per_batch = torch.zeros(num_updates, device=device)
 
+
+    # Create a window to store episode rewards as a queue
+    window_episode_rewards = deque(maxlen=cfg.logger.window_size)
+
+    # Save the total cumulative rewards over the episodes
+    general_cumulative_reward = 0
+
     # NOTE: IMPORTANT: collectors allows me to collect transitions in a different way
     # than the one I am get used to.
     # Practically, with the collector, I defined before hand all the number of interactions 
@@ -257,14 +268,26 @@ def main(cfg: "DictConfig"):
             episode_length = data["next", "step_count"][data["next", "done"]] * frame_skip
             episode_length_mean = episode_length.sum().item() / len(episode_length)
 
+            # Logging episodes in a window
+            window_episode_rewards.extend(episode_rewards.detach().cpu().numpy())
+
+            # Update the general cumulative reward
+            general_cumulative_reward += episode_rewards.sum().item()
+
             # NOTE: this log will be updated only if there is a new episode in the current
             # data batch gotten from interaction with the environment
             log_info.update(
                 {
                     "train/episode_reward": episode_reward_mean,
+                    "train/episode_reward_window": np.mean(window_episode_rewards),
+                    "train/episode_reward_var": np.var(window_episode_rewards),
+                    "train/episode_reward_cumulative": general_cumulative_reward,
                     "train/episode_length": episode_length_mean,
                 }
             )
+
+        
+
 
         # Warmup phase (due to the continue statement)
         # Additionally This help us to keep a track of the collected_frames
