@@ -6,8 +6,9 @@ exp_name: DQN_pixels
 # Environment
 # SEEDS: [118398, 676190, 786456, 171936, 887739, 919409, 711872, 442081, 189061, 117840]
 env:
-  env_name: LunarLander-v2
+  env_name: Acrobot-v1 # MountainCar-v0 # CarRacing-v2
   seed: 118398
+  cropping: False
 
 # collector
 collector:
@@ -43,7 +44,7 @@ buffer:
 # logger
 logger:
   backend: wandb
-  project_name: dqn_pixels_lunarlander_v2_sweep
+  project_name: dqn_pixels_Acrobot-v1_sweep # dqn_pixels_mountain_car_v0_sweep
   group_name: null
   test_interval: 25_000
   num_test_episodes: 5

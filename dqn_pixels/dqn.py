@@ -28,12 +28,14 @@ from torchrl.data.replay_buffers import PrioritizedSampler
 from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 
 # from torchrl.record.loggers import generate_exp_name, get_logger
-from utils_cartpole import eval_model, make_dqn_model, make_env, print_hyperparameters
+from utils_dqn import eval_model, make_dqn_model, make_env, print_hyperparameters
 import tempfile
 
 
 from collections import deque
 
+import numpy as np
+np.float_ = np.float64
 
 @hydra.main(config_path=".", config_name="config_cartpole", version_base=None)
 def main(cfg: "DictConfig"):
@@ -91,7 +93,10 @@ def main(cfg: "DictConfig"):
 
     # Make the components
     # Policy
-    model = make_dqn_model(cfg.env.env_name, cfg.policy, frame_skip).to(device)
+    model = make_dqn_model(cfg.env.env_name, 
+                           cfg.policy, 
+                           frame_skip,
+                           cfg.env.cropping).to(device)
 
 
     # NOTE: annealing_num_steps: number of steps 
@@ -112,7 +117,11 @@ def main(cfg: "DictConfig"):
     # NOTE: init_random_frames: Number of frames 
     # for which the policy is ignored before it is called.
     collector = SyncDataCollector(
-        create_env_fn=make_env(cfg.env.env_name, frame_skip = frame_skip , device = device, seed = cfg.env.seed),
+        create_env_fn=make_env(cfg.env.env_name, 
+                               frame_skip = frame_skip , 
+                               device = device, 
+                               seed = cfg.env.seed,
+                               cropping = cfg.env.cropping),
         policy=model_explore,
         frames_per_batch=frames_per_batch,
         total_frames=total_frames,
@@ -185,7 +194,11 @@ def main(cfg: "DictConfig"):
 
     # Create the test environment
     # NOTE: new line
-    test_env = make_env(cfg.env.env_name, frame_skip, device, seed=cfg.env.seed)#, is_test=True)
+    test_env = make_env(cfg.env.env_name, 
+                        frame_skip, 
+                        device, 
+                        seed=cfg.env.seed,
+                        cropping=cfg.env.cropping)#, is_test=True)
     if cfg.logger.video:
         test_env.insert_transform(
             0,

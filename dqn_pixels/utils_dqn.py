@@ -31,6 +31,9 @@ from torchrl.envs import (
 
 from utils_modules import DQNNetwork
 
+import numpy as np
+np.float_ = np.float64
+
 # ====================================================================
 # Environment utils
 # --------------------------------------------------------------------
@@ -39,13 +42,23 @@ from utils_modules import DQNNetwork
 def make_env(env_name="CartPole-v1", frame_skip = 4, 
              device="cpu", seed = 0, cropping = False):#, is_test=False):
 
-    env = GymEnv(
-        env_name,
-        frame_skip=frame_skip,
-        from_pixels=True,
-        pixels_only=True,
-        device=device,
-    )
+    if env_name == "CarRacing-v2":
+        env = GymEnv(
+            env_name,
+            frame_skip=frame_skip,
+            from_pixels=True,
+            pixels_only=False,
+            device=device,
+            continuous=False
+        )
+    else:
+        env = GymEnv(
+            env_name,
+            frame_skip=frame_skip,
+            from_pixels=True,
+            pixels_only=False,
+            device=device,
+        )
     env = TransformedEnv(env)
     # env.append_transform(NoopResetEnv(noops=30, random=True)) # NOTE: Cartpole with no noops will fall into reset in the begining
                                                                 # I could use an small noop reset to avoid this, but I think is not necesary
@@ -119,8 +132,8 @@ def make_dqn_modules_pixels(proof_environment, policy_cfg):
     return qvalue_module
 
 
-def make_dqn_model(env_name, policy_cfg, frame_skip):
-    proof_environment = make_env(env_name, frame_skip = frame_skip, device="cpu")
+def make_dqn_model(env_name, policy_cfg, frame_skip, cropping = False):
+    proof_environment = make_env(env_name, frame_skip = frame_skip, device="cpu", cropping = cropping)
     qvalue_module = make_dqn_modules_pixels(proof_environment, policy_cfg)
     del proof_environment
     return qvalue_module
