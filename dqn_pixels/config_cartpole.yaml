@@ -44,7 +44,7 @@ buffer:
 # logger
 logger:
   backend: wandb
-  project_name: dqn_pixels_Acrobot-v1_sweep # dqn_pixels_mountain_car_v0_sweep
+  project_name: dqn_pixels_acrobot_v1_sweep # dqn_pixels_mountain_car_v0_sweep
   group_name: null
   test_interval: 25_000
   num_test_episodes: 5
@@ -68,6 +68,7 @@ optim:
 
 # loss
 loss:
+  double_dqn: True
   gamma: 0.99
   target_updater:
     type: "hard"

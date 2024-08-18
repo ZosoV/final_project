@@ -165,6 +165,7 @@ def main(cfg: "DictConfig"):
         value_network=model,
         loss_function="l2", 
         delay_value=True, # delay_value=True means we will use a target network
+        double_dqn=cfg.loss.double_dqn,
     )
     # NOTE: additional line for Atari games
     # loss_module.set_keys(done="end-of-life", terminated="end-of-life")

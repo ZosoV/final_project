@@ -27,7 +27,7 @@ from torchrl.data.replay_buffers.samplers import RandomSampler, PrioritizedSampl
 from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 
 # from torchrl.record.loggers import generate_exp_name, get_logger
-from utils_cartpole import (
+from utils_dqn import (
     eval_model,
     make_dqn_model,
     make_env,
@@ -38,6 +38,10 @@ from utils_modules import MICODQNLoss
 
 import tempfile
 
+from collections import deque
+
+import numpy as np
+np.float_ = np.float64
 
 @hydra.main(config_path=".", config_name="config_cartpole", version_base=None)
 def main(cfg: "DictConfig"):
@@ -95,7 +99,10 @@ def main(cfg: "DictConfig"):
 
     # Make the components
     # Policy
-    model = make_dqn_model(cfg.env.env_name, cfg.policy, frame_skip).to(device)
+    model = make_dqn_model(cfg.env.env_name, 
+                           cfg.policy, 
+                           frame_skip,
+                           cfg.env.cropping).to(device)
 
 
     # NOTE: annealing_num_steps: number of steps 
@@ -116,7 +123,11 @@ def main(cfg: "DictConfig"):
     # NOTE: init_random_frames: Number of frames 
     # for which the policy is ignored before it is called.
     collector = SyncDataCollector(
-        create_env_fn=make_env(cfg.env.env_name, frame_skip = frame_skip , device = device, seed = cfg.env.seed),
+        create_env_fn=make_env(cfg.env.env_name,
+                                frame_skip = frame_skip,
+                                device = device, 
+                                seed = cfg.env.seed,
+                                cropping = cfg.env.cropping),
         policy=model_explore,
         frames_per_batch=frames_per_batch,
         total_frames=total_frames,
@@ -161,6 +172,7 @@ def main(cfg: "DictConfig"):
         value_network=model,
         loss_function="l2", 
         delay_value=True, # delay_value=True means we will use a target network
+        double_dqn=cfg.loss.double_dqn,
         mico_beta=cfg.loss.mico_loss.mico_beta,
         mico_gamma=cfg.loss.mico_loss.mico_gamma,
         mico_weight=cfg.loss.mico_loss.mico_weight,
@@ -195,7 +207,11 @@ def main(cfg: "DictConfig"):
 
     # Create the test environment
     # NOTE: new line
-    test_env = make_env(cfg.env.env_name, frame_skip, device, seed=cfg.env.seed)#, is_test=True)
+    test_env = make_env(cfg.env.env_name,
+                        frame_skip,
+                        device,
+                        seed=cfg.env.seed,
+                        cropping=cfg.env.cropping )#, is_test=True)
     if cfg.logger.video:
         test_env.insert_transform(
             0,
@@ -231,6 +247,14 @@ def main(cfg: "DictConfig"):
     priority_type = cfg.buffer.mico_priority.priority_type
     mico_priority_weight = cfg.buffer.mico_priority.priority_weight
     normalize_priorities = cfg.buffer.mico_priority.normalize_priorities
+
+
+    # Create a window to store episode rewards as a queue
+    window_episode_rewards = deque(maxlen=cfg.logger.window_size)
+
+    # Save the total cumulative rewards over the episodes
+    general_cumulative_reward = 0
+
 
     # NOTE: IMPORTANT: collectors allows me to collect transitions in a different way
     # than the one I am get used to.
@@ -293,11 +317,20 @@ def main(cfg: "DictConfig"):
             episode_length = data["next", "step_count"][data["next", "done"]] * frame_skip
             episode_length_mean = episode_length.sum().item() / len(episode_length)
 
+            # Logging episodes in a window
+            window_episode_rewards.extend(episode_rewards.detach().cpu().numpy())
+
+            # Update the general cumulative reward
+            general_cumulative_reward += episode_rewards.sum().item()
+
             # NOTE: this log will be updated only if there is a new episode in the current
             # data batch gotten from interaction with the environment
             log_info.update(
                 {
                     "train/episode_reward": episode_reward_mean,
+                    "train/episode_reward_window": np.mean(window_episode_rewards),
+                    "train/episode_reward_var": np.var(window_episode_rewards),
+                    "train/episode_reward_cumulative": general_cumulative_reward,
                     "train/episode_length": episode_length_mean,
                 }
             )
