@@ -49,7 +49,7 @@ logger:
   test_interval: 25_000
   num_test_episodes: 3
   video: False
-  mode: "online" # "online" or "disabled" ("offline" too but not used)
+  mode: "disabled" # "online" or "disabled" ("offline" too but not used)
   save_model: False
 
 # Optim
