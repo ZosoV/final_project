@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from tensordict import TensorDict
 
 # Create a matrix of all possible states taking into account that
 # state is given by position of agent
@@ -157,3 +158,25 @@ def calculate_td_error(loss_module, tensordict):
     )
 
     return tensordict
+
+def get_bisimulation_matrix(loss_module, test_env):
+
+    all_data_states = []
+
+    for state in test_env.unwrapped._possible_states:
+        data_state = test_env.reset(options = {"start_state": state})
+        all_data_states.append(data_state)
+
+    for state in test_env.unwrapped._targets_location:
+        data_state = test_env.reset(options = {"start_state": state})
+        all_data_states.append(data_state)
+
+    # concatenated_data = TensorDict(
+    #     {
+    #         key: torch.cat([td[key] for td in all_data_states if key not in ["behavioral_distance","pixels","observation"] else td[key].unsqueeze(0)], dim=0)
+    #         for key in all_data_states[0].keys()
+    #     }
+    #     # batch_size=torch.Size([len(all_data_states)] + list(all_data_states[0].batch_size))
+    # )
+
+    return concatenated_data

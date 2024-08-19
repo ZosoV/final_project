@@ -28,7 +28,13 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 
 # from torchrl.record.loggers import generate_exp_name, get_logger
 from utils_grid_world import eval_model, make_dqn_model, make_env, print_hyperparameters, get_norm_stats
-from utils_experiments import calculate_mico_distance, calculate_td_error, bisimulation_distribution, get_distribution, get_entropy
+from utils_experiments import (
+    calculate_mico_distance, 
+    calculate_td_error, 
+    bisimulation_distribution, 
+    get_distribution, 
+    get_entropy,
+    get_bisimulation_matrix, )
 import tempfile
 
 from gymnasium.envs.registration import register
@@ -384,6 +390,8 @@ def main(cfg: "DictConfig"):
                         # "replay_buffer/mico_bisimulation_std": mico_bisim_std,
                     }
                 )
+        
+        mico_bisim_matrix = get_bisimulation_matrix(loss_module, test_env)
 
         # Get and log evaluation rewards and eval time
         # NOTE: As I'm using only the model and not the model_explore that will deterministic I think
@@ -400,8 +408,13 @@ def main(cfg: "DictConfig"):
 
                 # Saving the exploration matrix
                 base_name = os.path.basename(cfg.env.grid_file).split(".")[0]
-                file_name = f"results/{base_name}/visiting_count_{base_name}_frame_{collected_frames}.pt"
+                folder_name = f"results/{base_name}"
+                os.makedirs(folder_name, exist_ok=True)    
+                file_name = os.path.join(folder_name, f"visiting_count_{base_name}_frame_{collected_frames}.pt")
                 torch.save(visiting_count, file_name)
+
+                # Getting bisimulation matrix for mico experiments
+                # mico_bisim_matrix = get_bisimulation_matrix(loss_module, test_env)
 
                 # Evaluating fixed trajectories
                 model.eval()

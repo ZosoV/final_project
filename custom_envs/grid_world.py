@@ -8,7 +8,10 @@ import json
 class GridWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, grid_file = None, bisimulation_distance_file = None):
+    def __init__(self, render_mode=None, 
+                        grid_file = None, 
+                        bisimulation_distance_file = None,
+                        start_state = None):
 
         # Load from a file
         if grid_file is None:
@@ -18,6 +21,8 @@ class GridWorldEnv(gym.Env):
 
         self.size = self._grid.shape[0] # if self._grid else size  # The size of the square grid
         self.window_size = 512  # The size of the PyGame window
+
+        self._start_state = np.array(start_state) if start_state is not None else None
 
         self.bisimulation_distance = None
         # If bisimulation_distance_file is provided, load it
@@ -89,14 +94,21 @@ class GridWorldEnv(gym.Env):
     def _set_components(self):
         self._walls_location = []
         self._targets_location = []
+        self._possible_states = []
         for i in range(self.size):
             for j in range(self.size):
                 if self._grid[i, j] == 'x':
                     self._walls_location.append((i, j))
                 elif self._grid[i, j] == 'G':
                     self._targets_location.append((i, j))
+                elif self._grid[i, j] == 'A':
+                    self._start_state = np.array([i, j])
+                else:
+                    self._possible_states.append((i, j))
         self._walls_location = set(self._walls_location)
         self._targets_location = set(self._targets_location)
+        self._possible_states = set(self._possible_states)
+        self.num_states = self.size * self.size - len(self._walls_location)
 
     def _get_obs(self):
         behavioral_distance = np.zeros(len(self._action_to_direction))
@@ -118,13 +130,20 @@ class GridWorldEnv(gym.Env):
         # We need the following line to seed self.np_random
         super().reset(seed=seed)
 
-        # We will sample the agent's location randomly until it does not coincide with the target or walls's location
-        self._agent_location = self.np_random.integers(0, self.size, size=2, dtype=int)
+        if options and "start_state" in options:
+            # Use the provided start_state from the options dictionary
+            self._agent_location = np.array(options["start_state"])
+        else:
+            if self._start_state is None:
+                # We will sample the agent's location randomly until it does not coincide with the target or walls's location
+                self._agent_location = self.np_random.integers(0, self.size, size=2, dtype=int)
 
-        while tuple(self._agent_location) in self._walls_location or tuple(self._agent_location) in self._targets_location:
-            self._agent_location = self.np_random.integers(
-                0, self.size, size=2, dtype=int
-            )
+                while tuple(self._agent_location) in self._walls_location or tuple(self._agent_location) in self._targets_location:
+                    self._agent_location = self.np_random.integers(
+                        0, self.size, size=2, dtype=int
+                    )
+            else:
+                self._agent_location = self._start_state
 
         # while np.array_equal(self._target_location, self._agent_location) or tuple(self._agent_location) in self._walls_location:
         #     self._agent_location = self.np_random.integers(
