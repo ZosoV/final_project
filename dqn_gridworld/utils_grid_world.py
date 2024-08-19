@@ -31,7 +31,7 @@ from torchrl.envs import (
 )
 import gymnasium as gym
 from torchrl.envs import GymWrapper
-
+import os
 
 from utils_modules import DQNNetwork
 
@@ -40,21 +40,30 @@ from utils_modules import DQNNetwork
 # --------------------------------------------------------------------
 
 
-def make_env(env_name="GridWorldEnv-v0",  
-             device="cpu", 
-             grid_file = "../custom_envs/grid_envs/grid_world2.txt",
-             seed = 0, 
+def make_env(cfg_env,  
+             device="cpu",
              obs_norm_sd = None):#, is_test=False):
-    
+    env_name = cfg_env.env_name
+    grid_file = cfg_env.grid_file
+    base_name = os.path.basename(grid_file)
+    bisimulation_distance_file = os.path.join(
+                            os.path.dirname(grid_file),
+                            f"distances_{base_name}")
+
+    seed = cfg_env.seed
+
     if obs_norm_sd is None:
         obs_norm_sd = {"standard_normal": True}
 
-    env = gym.make(env_name, render_mode = "rgb_array", grid_file=grid_file)
+    env = gym.make(env_name,
+                    render_mode = "rgb_array", 
+                    grid_file=grid_file,
+                    bisimulation_distance_file=bisimulation_distance_file)
     env = GymWrapper(env, from_pixels=True, pixels_only=False, device=device)
     env = TransformedEnv(env)
     env.append_transform(ToTensorImage()) 
     env.append_transform(GrayScale())
-    env.append_transform(Resize(64, 64))
+    env.append_transform(Resize(84, 84))
     env.append_transform(RewardSum())
     env.append_transform(StepCounter()) # NOTE: GridWordv0 has a max of 200 steps
     env.append_transform(DoubleToFloat())
@@ -66,9 +75,9 @@ def make_env(env_name="GridWorldEnv-v0",
     # 4 frames each
     return env
 
-def get_norm_stats(num_iter = 250):
+def get_norm_stats(cfg_env, num_iter = 250):
     # NOTE: num_iter depends of the complexity of the input images (set to 1000 is a good approach)
-    test_env = make_env()
+    test_env = make_env(cfg_env)
     test_env.set_seed(0)
     test_env.transform[-1].init_stats(
         num_iter=num_iter, cat_dim=0, reduce_dim=[-1, -2, -4], keep_dims=(-1, -2)
@@ -130,8 +139,8 @@ def make_dqn_modules_pixels(proof_environment, policy_cfg):
     return qvalue_module
 
 
-def make_dqn_model(env_name, policy_cfg, obs_norm_sd, grid_file):
-    proof_environment = make_env(env_name, obs_norm_sd = obs_norm_sd, device="cpu", grid_file = grid_file)
+def make_dqn_model(cfg_env, policy_cfg, obs_norm_sd):
+    proof_environment = make_env(cfg_env, obs_norm_sd = obs_norm_sd, device="cpu")
     qvalue_module = make_dqn_modules_pixels(proof_environment, policy_cfg)
     del proof_environment
     return qvalue_module

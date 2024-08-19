@@ -99,7 +99,10 @@ class GridWorldEnv(gym.Env):
         self._targets_location = set(self._targets_location)
 
     def _get_obs(self):
-        return {"observation": self._agent_location, "behavioral_distance": self.[str(tuple(state))]}
+        behavioral_distance = np.zeros(len(self._action_to_direction))
+        if self.bisimulation_distance is not None:
+            behavioral_distance =  np.array(self.bisimulation_distance[str(tuple(self._agent_location))])
+        return {"observation": self._agent_location, "behavioral_distance": behavioral_distance}
 
         # return self._agent_location
 

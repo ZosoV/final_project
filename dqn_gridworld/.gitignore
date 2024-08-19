@@ -3,3 +3,4 @@ outputs/
 wandb/
 multirun/
 __pycache__/
+results/

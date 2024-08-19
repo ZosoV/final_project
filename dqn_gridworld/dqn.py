@@ -28,13 +28,15 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 
 # from torchrl.record.loggers import generate_exp_name, get_logger
 from utils_grid_world import eval_model, make_dqn_model, make_env, print_hyperparameters, get_norm_stats
+from utils_experiments import calculate_mico_distance, calculate_td_error, bisimulation_distribution, get_distribution, get_entropy
 import tempfile
 
 from gymnasium.envs.registration import register
 
 import sys
 import os
-sys.path.insert(0, os.path.abspath('../'))
+# sys.path.insert(0, os.path.abspath('../'))
+sys.path.insert(0, os.path.abspath('final_project'))
 
 @hydra.main(config_path=".", config_name="config_gridworld", version_base=None)
 def main(cfg: "DictConfig"):
@@ -99,14 +101,13 @@ def main(cfg: "DictConfig"):
     )
 
     # Get normalization stats for the environment
-    obs_norm_sd = get_norm_stats()
+    obs_norm_sd = get_norm_stats(cfg.env)
 
     # Make the components
     # Policy
-    model = make_dqn_model(cfg.env.env_name,
+    model = make_dqn_model(cfg.env,
                            cfg.policy, 
-                           obs_norm_sd,
-                           cfg.env.grid_file).to(device)
+                           obs_norm_sd).to(device)
 
 
     # NOTE: annealing_num_steps: number of steps 
@@ -127,11 +128,9 @@ def main(cfg: "DictConfig"):
     # NOTE: init_random_frames: Number of frames 
     # for which the policy is ignored before it is called.
     collector = SyncDataCollector(
-        create_env_fn=make_env(cfg.env.env_name, 
+        create_env_fn=make_env(cfg.env, 
                                device = device,
-                               obs_norm_sd = obs_norm_sd,
-                               grid_file=cfg.env.grid_file, 
-                               seed = cfg.env.seed),
+                               obs_norm_sd = obs_norm_sd),
         policy=model_explore,
         frames_per_batch=frames_per_batch,
         total_frames=total_frames,
@@ -204,11 +203,10 @@ def main(cfg: "DictConfig"):
 
     # Create the test environment
     # NOTE: new line
-    test_env = make_env(cfg.env.env_name,
+    test_env = make_env(cfg.env,
                         device = device,
-                        obs_norm_sd = obs_norm_sd,
-                        grid_file=cfg.env.grid_file,
-                        seed=cfg.env.seed)#, is_test=True)
+                        obs_norm_sd = obs_norm_sd)
+                        #, is_test=True)
     if cfg.logger.video:
         test_env.insert_transform(
             0,
@@ -235,6 +233,7 @@ def main(cfg: "DictConfig"):
     init_random_frames = init_random_frames
     sampling_start = time.time()
     q_losses = torch.zeros(num_updates, device=device)
+    visiting_count = torch.zeros((test_env.unwrapped.size, test_env.unwrapped.size))
 
 
     # NOTE: IMPORTANT: collectors allows me to collect transitions in a different way
@@ -263,6 +262,17 @@ def main(cfg: "DictConfig"):
         current_frames = data.numel() * frame_skip
         collected_frames += current_frames
         greedy_module.step(current_frames)
+
+        # Counting the visiting states
+        visiting_count[data['observation'][:, 0], data['observation'][:, 1]] += 1
+
+        # NOTE: I need to calculate the mico_distance for the current data
+        # to check statistics of the mico_distance in mico experiments
+        # data = calculate_mico_distance(loss_module, data)
+
+        # NOTE: I need to calculate the td_errors in everything
+        data = calculate_td_error(loss_module, data)
+
         replay_buffer.extend(data)
 
         # Get the number of episodes
@@ -326,6 +336,8 @@ def main(cfg: "DictConfig"):
             q_losses[j].copy_(q_loss.detach())
         training_time = time.time() - training_start
 
+
+
         if scheduler_activated:
             scheduler.step()
 
@@ -343,6 +355,36 @@ def main(cfg: "DictConfig"):
             }
         )
 
+        # Log exploration measures
+        log_info.update(
+            {
+                "exploration/entropy": get_entropy(visiting_count)
+            }
+        )
+
+        if cfg.logger.save_distributions:
+            # This is the theoretical on-policy bisimulation distance
+            bisim_hist, bisim_mean, bisim_std = bisimulation_distribution(replay_buffer.storage)
+
+            td_error_hist, td_error_mean, td_error_std = get_distribution(replay_buffer.storage['td_error'])
+            
+            # This is the empirical mico on-policy bisimulation distance
+            # mico_bisim_hist, mico_bisim_mean, mico_bisim_std = get_distribution(replay_buffer.storage['mico_distance'])
+
+            log_info.update(
+                    {
+                        "replay_buffer/theoretical_bisimulation_metric": wandb.Histogram(np_histogram = bisim_hist),
+                        "replay_buffer/bisim_mean": bisim_mean,
+                        "replay_buffer/bisim_std": bisim_std,
+                        "replay_buffer/td_error": wandb.Histogram(np_histogram = td_error_hist),
+                        "replay_buffer/td_error_mean": td_error_mean,
+                        "replay_buffer/td_error_std": td_error_std,
+                        # "replay_buffer/mico_bisimulation_metric": wandb.Histogram(np_histogram = mico_bisim_hist),
+                        # "replay_buffer/mico_bisimulation_mean": mico_bisim_mean,
+                        # "replay_buffer/mico_bisimulation_std": mico_bisim_std,
+                    }
+                )
+
         # Get and log evaluation rewards and eval time
         # NOTE: As I'm using only the model and not the model_explore that will deterministic I think
         with torch.no_grad(): #, set_exploration_type(ExplorationType.DETERMINISTIC):
@@ -355,6 +397,13 @@ def main(cfg: "DictConfig"):
 
             # compara prev_test_frame < cur_test_frame is the same as current_frames % test_interval == 0
             if (i >= 1 and (prev_test_frame < cur_test_frame)) or final:
+
+                # Saving the exploration matrix
+                base_name = os.path.basename(cfg.env.grid_file).split(".")[0]
+                file_name = f"results/{base_name}/visiting_count_{base_name}_frame_{collected_frames}.pt"
+                torch.save(visiting_count, file_name)
+
+                # Evaluating fixed trajectories
                 model.eval()
                 eval_start = time.time()
                 test_rewards = eval_model(model, test_env, num_test_episodes)
