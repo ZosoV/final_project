@@ -11,7 +11,7 @@ Work in Progress
 
 pip install torchrl torch torchvision wandb hydra-core tqdm gymnasium gymnasium[classic-control]
 
-conda create --name final-project python=3.10
+conda create -y --name final-project python=3.10 
 
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 
