@@ -2,6 +2,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import pygame
 import numpy as np
+import json
 
 
 class GridWorldEnv(gym.Env):
@@ -21,20 +22,22 @@ class GridWorldEnv(gym.Env):
         self.bisimulation_distance = None
         # If bisimulation_distance_file is provided, load it
         if bisimulation_distance_file is not None:
-            self.bisimulation_distance = np.array([line.split() for line in bisimulation_distance_file], dtype=np.float32)
-
+            # self.bisimulation_distance = np.array([line.split() for line in bisimulation_distance_file], dtype=np.float32)
+            # Load JSON file
+            with open(bisimulation_distance_file, 'r') as json_file:
+                self.bisimulation_distance = json.load(json_file)
         # Set walls and target
         self._set_components()
 
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
-        # self.observation_space = spaces.Dict(
-        #     {
-        #         "agent": spaces.Box(0, self.size - 1, shape=(2,), dtype=int),
-        #         "target": spaces.Box(0, self.size - 1, shape=(2,), dtype=int),
-        #     }
-        # )
-        self.observation_space = spaces.Box(low=0, high=self.size-1, shape=(2,), dtype=np.int64)
+        self.observation_space = spaces.Dict(
+            {
+                "observation": spaces.Box( low = 0, high = self.size - 1, shape=(2,), dtype=np.int64),
+                "behavioral_distance": spaces.Box( low = 0, high = np.inf, shape=(4,), dtype=np.float64),
+            }
+        )
+        # self.observation_space = spaces.Box(low=0, high=self.size-1, shape=(2,), dtype=np.int64)
 
 
         # We have 4 actions, corresponding to "down", "right", "up" and "left".
@@ -96,8 +99,9 @@ class GridWorldEnv(gym.Env):
         self._targets_location = set(self._targets_location)
 
     def _get_obs(self):
-        # return {"agent": self._agent_location, "target": self._targets_location}
-        return self._agent_location
+        return {"observation": self._agent_location, "behavioral_distance": self.[str(tuple(state))]}
+
+        # return self._agent_location
 
     def _get_info(self):
         # return {
@@ -147,7 +151,11 @@ class GridWorldEnv(gym.Env):
         # An episode is done iff the agent has reached the target
         # terminated = np.array_equal(self._agent_location, self._target_location)
         terminated = tuple(self._agent_location) in self._targets_location
-        reward = 1 if terminated else 0  # Binary sparse rewards
+
+        # REWARD: The rewards is given by the minimum number of steps you should
+        # need to take in a environment without obstacles
+        # NOTE: Check it better
+        reward = self.size * 2 if terminated else -1  # Binary sparse rewards
         observation = self._get_obs()
         info = self._get_info()
 
