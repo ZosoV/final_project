@@ -42,7 +42,7 @@ buffer:
   beta: 0.4
   mico_priority:
     priority_type: "all_vs_all" # "all_vs_all" or "current_vs_next"
-    priority_weight: 0.25
+    priority_weight: 1.0
     normalize_priorities: False
 
 # logger
