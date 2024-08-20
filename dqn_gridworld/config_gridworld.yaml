@@ -10,7 +10,7 @@ env:
   # grid_file: "../custom_envs/grid_envs/grid_world2.txt"
   grid_file: "final_project/custom_envs/grid_envs/grid_world2.txt" # For debugging
   seed: 118398
-  enable_mico: False
+  enable_mico: True
   start_state: null
 
 # collector
@@ -20,7 +20,7 @@ collector:
   eps_start: 0.1
   eps_end: 0.005
   annealing_frames: 520_000 
-  init_random_frames: 256 # No warm up only the first batch
+  init_random_frames: 200 # No warm up only the first batch
   frame_skip: 1
 
 # policy
@@ -37,7 +37,7 @@ policy:
 
 # buffer
 buffer:
-  buffer_size: 10_000
+  buffer_size: 100_000
   batch_size: 256
   scratch_dir: null
   prioritized_replay: False
@@ -55,7 +55,7 @@ logger:
   group_name: null
   test_interval: 10_000
   num_test_episodes: 5
-  video: True
+  video: False
   mode: "online" # "online" or "disabled" ("offline" too but not used)
   save_model: False
   save_distributions: True
@@ -75,7 +75,7 @@ optim:
 
 # loss
 loss:
-  double_dqn: True
+  double_dqn: False
   gamma: 0.99
   mico_loss:
     mico_weight: 0.01 #0.5

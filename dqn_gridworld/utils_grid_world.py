@@ -33,7 +33,7 @@ import gymnasium as gym
 from torchrl.envs import GymWrapper
 import os
 
-from utils_modules import DQNNetwork
+from utils_modules import DQNNetwork, MICODQNNetwork
 
 # ====================================================================
 # Environment utils
@@ -96,7 +96,7 @@ def get_norm_stats(cfg_env, num_iter = 250):
 # --------------------------------------------------------------------
 
 
-def make_dqn_modules_pixels(proof_environment, policy_cfg):
+def make_dqn_modules_pixels(proof_environment, policy_cfg, enable_mico = False):
 
     # Define input shape
     input_shape = proof_environment.observation_spec["pixels"].shape
@@ -113,20 +113,37 @@ def make_dqn_modules_pixels(proof_environment, policy_cfg):
     # Define Q-Value Module
     activation_class = getattr(torch.nn, policy_cfg.activation)
 
-    q_net = DQNNetwork(
-        input_shape=input_shape,
-        num_outputs=num_actions,
-        num_cells_cnn=list(policy_cfg.cnn_net.num_cells),
-        kernel_sizes=list(policy_cfg.cnn_net.kernel_sizes),
-        strides=list(policy_cfg.cnn_net.strides),
-        num_cells_mlp=list(policy_cfg.mlp_net.num_cells),
-        activation_class=activation_class,
-        use_batch_norm=policy_cfg.use_batch_norm,
-    )
+    if enable_mico:
+        q_net = MICODQNNetwork(
+            input_shape=input_shape,
+            num_outputs=num_actions,
+            num_cells_cnn=list(policy_cfg.cnn_net.num_cells),
+            kernel_sizes=list(policy_cfg.cnn_net.kernel_sizes),
+            strides=list(policy_cfg.cnn_net.strides),
+            num_cells_mlp=list(policy_cfg.mlp_net.num_cells),
+            activation_class=activation_class,
+            use_batch_norm=policy_cfg.use_batch_norm,
+        )
 
-    q_net = TensorDictModule(q_net,
-        in_keys=["pixels"], 
-        out_keys=["action_value"])
+        q_net = TensorDictModule(q_net,
+            in_keys=["pixels"], 
+            out_keys=["action_value", "representation"])
+
+    else:
+        q_net = DQNNetwork(
+            input_shape=input_shape,
+            num_outputs=num_actions,
+            num_cells_cnn=list(policy_cfg.cnn_net.num_cells),
+            kernel_sizes=list(policy_cfg.cnn_net.kernel_sizes),
+            strides=list(policy_cfg.cnn_net.strides),
+            num_cells_mlp=list(policy_cfg.mlp_net.num_cells),
+            activation_class=activation_class,
+            use_batch_norm=policy_cfg.use_batch_norm,
+        )
+
+        q_net = TensorDictModule(q_net,
+            in_keys=["pixels"], 
+            out_keys=["action_value"])
 
 
     # NOTE: Do I need CompositeSpec here?
@@ -139,9 +156,9 @@ def make_dqn_modules_pixels(proof_environment, policy_cfg):
     return qvalue_module
 
 
-def make_dqn_model(cfg_env, policy_cfg, obs_norm_sd):
+def make_dqn_model(cfg_env, policy_cfg, obs_norm_sd, enable_mico = False):
     proof_environment = make_env(cfg_env, obs_norm_sd = obs_norm_sd, device="cpu")
-    qvalue_module = make_dqn_modules_pixels(proof_environment, policy_cfg)
+    qvalue_module = make_dqn_modules_pixels(proof_environment, policy_cfg, enable_mico = enable_mico)   
     del proof_environment
     return qvalue_module
 

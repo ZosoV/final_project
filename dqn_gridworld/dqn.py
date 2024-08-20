@@ -35,6 +35,10 @@ from utils_experiments import (
     get_distribution, 
     get_entropy,
     get_bisimulation_matrix, )
+
+from utils_modules import MICODQNLoss
+
+
 import tempfile
 
 from gymnasium.envs.registration import register
@@ -115,7 +119,8 @@ def main(cfg: "DictConfig"):
     # Policy
     model = make_dqn_model(cfg.env,
                            cfg.policy, 
-                           obs_norm_sd).to(device)
+                           obs_norm_sd,
+                           cfg.env.enable_mico).to(device)
 
 
     # NOTE: annealing_num_steps: number of steps 
@@ -178,11 +183,25 @@ def main(cfg: "DictConfig"):
     )
     
     # Create the loss module
-    loss_module = DQNLoss(
-        value_network=model,
-        loss_function="l2", 
-        delay_value=True, # delay_value=True means we will use a target network
-    )
+    if cfg.env.enable_mico:
+        loss_module = MICODQNLoss(
+            value_network=model,
+            loss_function="l2", 
+            delay_value=True, # delay_value=True means we will use a target network
+            double_dqn=cfg.loss.double_dqn,
+            mico_beta=cfg.loss.mico_loss.mico_beta,
+            mico_gamma=cfg.loss.mico_loss.mico_gamma,
+            mico_weight=cfg.loss.mico_loss.mico_weight,
+            priority_type=cfg.buffer.mico_priority.priority_type,
+        )
+    else:
+        loss_module = DQNLoss(
+            value_network=model,
+            loss_function="l2", 
+            delay_value=True, # delay_value=True means we will use a target network
+        )
+
+
     # NOTE: additional line for Atari games
     # loss_module.set_keys(done="end-of-life", terminated="end-of-life")
     
@@ -244,6 +263,9 @@ def main(cfg: "DictConfig"):
     init_random_frames = init_random_frames
     sampling_start = time.time()
     q_losses = torch.zeros(num_updates, device=device)
+    mico_losses = torch.zeros(num_updates, device=device)
+    total_losses = torch.zeros(num_updates, device=device)
+      
     visiting_count = torch.zeros((test_env.unwrapped.size, test_env.unwrapped.size))
 
     # Create a window to store episode rewards as a queue
@@ -341,10 +363,9 @@ def main(cfg: "DictConfig"):
             sampled_tensordict = sampled_tensordict.to(device)
 
             # Also the loss module will use the current and target model to get the q-values
-            loss_td = loss_module(sampled_tensordict)
-            q_loss = loss_td["loss"]
+            loss = loss_module(sampled_tensordict)
             optimizer.zero_grad()
-            q_loss.backward()
+            loss["loss"].backward()
             if grad_clipping:
                 torch.nn.utils.clip_grad_norm_(
                     list(loss_module.parameters()), max_norm=max_grad
@@ -353,14 +374,30 @@ def main(cfg: "DictConfig"):
 
             # Update the priorities
             if prioritized_replay:
-                replay_buffer.update_priority(index=sampled_tensordict['index'], priority = sampled_tensordict['td_error'])
+                
+                if cfg.env.enable_mico:
+                    norm_td_error = torch.log(sampled_tensordict["td_error"] + 1)
+                    norm_mico_distance = torch.log(sampled_tensordict["mico_distance"] + 1)
+                    
+                    if normalize_priorities:
+                        priority = (1 - mico_priority_weight) * norm_td_error + mico_priority_weight * norm_mico_distance
+                    else:
+                        priority = (1 - mico_priority_weight) * sampled_tensordict["td_error"] + mico_priority_weight * sampled_tensordict["mico_distance"]
+                    replay_buffer.update_priority(index=sampled_tensordict['index'], priority = priority)
+                else:
+                    replay_buffer.update_priority(index=sampled_tensordict['index'], priority = sampled_tensordict['td_error'])
 
             # NOTE: This is only one step (after n-updated steps defined before)
             # the target will update
             target_net_updater.step()
-            q_losses[j].copy_(q_loss.detach())
-        training_time = time.time() - training_start
+            if cfg.env.enable_mico:
+                q_losses[j].copy_(loss["td_loss"].detach())
+                mico_losses[j].copy_(loss["mico_loss"].detach())
+                total_losses[j].copy_(loss["loss"].detach())
+            else:
+                q_losses[j].copy_(loss["loss"].detach())
 
+        training_time = time.time() - training_start
 
 
         if scheduler_activated:
@@ -379,6 +416,14 @@ def main(cfg: "DictConfig"):
                 # "train/training_time": training_time,
             }
         )
+
+        if cfg.env.enable_mico:
+            log_info.update(
+                {
+                    "train/mico_loss": mico_losses.mean().item(),
+                    "train/total_loss": total_losses.mean().item(),
+                }
+            )
 
         # Log exploration measures
         log_info.update(
