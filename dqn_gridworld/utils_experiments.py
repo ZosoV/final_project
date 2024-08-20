@@ -159,6 +159,33 @@ def calculate_td_error(loss_module, tensordict):
 
     return tensordict
 
+def calculate_mico_distance_all_states(loss_module, tensordict):
+    td_online_copy = tensordict.clone(False)
+    with loss_module.value_network_params.to_module(loss_module.value_network):
+        loss_module.value_network(td_online_copy)
+
+    representations = td_online_copy['representation']
+
+    # NOTE: In the code implementation, the author decided to compare the representations of 
+    # the current states above vs all the representation of the current state but evaluated 
+    # in the target_network.
+
+    # Additionally, the next states passed throught the target network are needed for calculate
+    # the target distance. Then, we are gonna pass the whole batch through the target network
+    td_target_copy = tensordict.clone(False)
+    with loss_module.target_value_network_params.to_module(loss_module.value_network):
+        with torch.no_grad():
+            loss_module.value_network(td_target_copy)
+            target_r = td_target_copy['representation'].detach()
+
+    with torch.no_grad():
+
+
+        online_dist = utils_metric.representation_distances(
+                        representations, target_r, loss_module.mico_beta)
+
+    return online_dist
+
 def get_bisimulation_matrix(loss_module, test_env):
 
     all_data_states = []
@@ -171,12 +198,29 @@ def get_bisimulation_matrix(loss_module, test_env):
         data_state = test_env.reset(options = {"start_state": state})
         all_data_states.append(data_state)
 
-    # concatenated_data = TensorDict(
-    #     {
-    #         key: torch.cat([td[key] for td in all_data_states if key not in ["behavioral_distance","pixels","observation"] else td[key].unsqueeze(0)], dim=0)
-    #         for key in all_data_states[0].keys()
-    #     }
-    #     # batch_size=torch.Size([len(all_data_states)] + list(all_data_states[0].batch_size))
-    # )
+    keys2unsqueeze = [
+        "behavioral_distance",
+        "pixels",
+        "observation",
+        "episode_reward",
+        "step_count",
+        "terminated",
+        "truncated"]
 
-    return concatenated_data
+    tmp_dict = {}
+    for key in all_data_states[0].keys():
+        if key in keys2unsqueeze:
+            tmp_dict[key] = torch.cat([td[key].unsqueeze(0) for td in all_data_states], dim=0)
+        else:
+            tmp_dict[key] = torch.cat([td[key] for td in all_data_states], dim=0)
+
+    concatenated_data = TensorDict(
+        tmp_dict, 
+        batch_size=torch.Size([len(all_data_states)]))
+
+    # Calculate the bisimulation distance of all vs all
+    distances_all_vs_all = calculate_mico_distance_all_states(loss_module, concatenated_data)
+
+    batch_size = len(all_data_states)
+
+    return distances_all_vs_all.reshape((batch_size,batch_size))

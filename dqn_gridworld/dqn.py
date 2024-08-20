@@ -22,7 +22,7 @@ from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer, LazyMemmapSt
 from torchrl.envs import ExplorationType, set_exploration_type
 from torchrl.modules import EGreedyModule
 from torchrl.objectives import DQNLoss, HardUpdate, SoftUpdate
-from torchrl.record import VideoRecorder
+from torchrl.record import VideoRecorder, CSVLogger
 from torchrl.data.replay_buffers.samplers import RandomSampler, PrioritizedSampler
 from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 
@@ -38,6 +38,8 @@ from utils_experiments import (
 import tempfile
 
 from gymnasium.envs.registration import register
+
+from collections import deque
 
 import sys
 import os
@@ -213,11 +215,14 @@ def main(cfg: "DictConfig"):
                         device = device,
                         obs_norm_sd = obs_norm_sd)
                         #, is_test=True)
+
+    
     if cfg.logger.video:
+        logger = CSVLogger("./results", video_format="mp4")
         test_env.insert_transform(
             0,
             VideoRecorder(
-                logger, tag=f"rendered/{cfg.env.env_name}", in_keys=["pixels"]
+                logger, tag=f"rendered/{cfg.env.env_name}", in_keys=["pixels"], skip=1
             ),
         )
     test_env.eval()
@@ -241,6 +246,11 @@ def main(cfg: "DictConfig"):
     q_losses = torch.zeros(num_updates, device=device)
     visiting_count = torch.zeros((test_env.unwrapped.size, test_env.unwrapped.size))
 
+    # Create a window to store episode rewards as a queue
+    window_episode_rewards = deque(maxlen=cfg.logger.window_size)
+
+    # Save the total cumulative rewards over the episodes
+    general_cumulative_reward = 0
 
     # NOTE: IMPORTANT: collectors allows me to collect transitions in a different way
     # than the one I am get used to.
@@ -298,11 +308,20 @@ def main(cfg: "DictConfig"):
             episode_length = data["next", "step_count"][data["next", "done"]] * frame_skip
             episode_length_mean = episode_length.sum().item() / len(episode_length)
 
+            # Logging episodes in a window
+            window_episode_rewards.extend(episode_rewards.detach().cpu().numpy())
+
+            # Update the general cumulative reward
+            general_cumulative_reward += episode_rewards.sum().item()
+
             # NOTE: this log will be updated only if there is a new episode in the current
             # data batch gotten from interaction with the environment
             log_info.update(
                 {
                     "train/episode_reward": episode_reward_mean,
+                    "train/episode_reward_window": np.mean(window_episode_rewards),
+                    "train/episode_reward_var": np.var(window_episode_rewards),
+                    "train/episode_reward_cumulative": general_cumulative_reward,                    
                     "train/episode_length": episode_length_mean,
                 }
             )
@@ -377,6 +396,17 @@ def main(cfg: "DictConfig"):
             # This is the empirical mico on-policy bisimulation distance
             # mico_bisim_hist, mico_bisim_mean, mico_bisim_std = get_distribution(replay_buffer.storage['mico_distance'])
 
+            if prioritized_replay:
+                priority_hist, priority_mean, priority_std = get_distribution(replay_buffer.storage['td_error'])
+
+                log_info.update(
+                    {
+                        "replay_buffer/priority": wandb.Histogram(np_histogram = priority_hist),
+                        "replay_buffer/priority_mean": priority_mean,
+                        "replay_buffer/priority_std": priority_std,
+                    }
+                )
+
             log_info.update(
                     {
                         "replay_buffer/theoretical_bisimulation_metric": wandb.Histogram(np_histogram = bisim_hist),
@@ -391,7 +421,7 @@ def main(cfg: "DictConfig"):
                     }
                 )
         
-        mico_bisim_matrix = get_bisimulation_matrix(loss_module, test_env)
+        
 
         # Get and log evaluation rewards and eval time
         # NOTE: As I'm using only the model and not the model_explore that will deterministic I think
@@ -415,6 +445,11 @@ def main(cfg: "DictConfig"):
 
                 # Getting bisimulation matrix for mico experiments
                 # mico_bisim_matrix = get_bisimulation_matrix(loss_module, test_env)
+                # base_name = os.path.basename(cfg.env.grid_file).split(".")[0]
+                # folder_name = f"results/{base_name}"
+                # os.makedirs(folder_name, exist_ok=True)    
+                # file_name = os.path.join(folder_name, f"bisim_matrix_{base_name}_frame_{collected_frames}.pt")
+                # torch.save(mico_bisim_matrix, file_name)
 
                 # Evaluating fixed trajectories
                 model.eval()

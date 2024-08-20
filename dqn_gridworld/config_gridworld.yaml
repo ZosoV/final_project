@@ -9,8 +9,9 @@ env:
   env_name: GridWorldEnv-v0
   # grid_file: "../custom_envs/grid_envs/grid_world2.txt"
   grid_file: "final_project/custom_envs/grid_envs/grid_world2.txt" # For debugging
-  bisimulation_distance_file: "final_project/custom_envs/grid_envs/distances_grid_world2.txt"
   seed: 118398
+  enable_mico: False
+  start_state: null
 
 # collector
 collector:
@@ -19,7 +20,7 @@ collector:
   eps_start: 0.1
   eps_end: 0.005
   annealing_frames: 520_000 
-  init_random_frames: 200
+  init_random_frames: 256 # No warm up only the first batch
   frame_skip: 1
 
 # policy
@@ -36,12 +37,16 @@ policy:
 
 # buffer
 buffer:
-  buffer_size: 100_000
+  buffer_size: 10_000
   batch_size: 256
   scratch_dir: null
   prioritized_replay: False
   alpha: 0.6
   beta: 0.4
+  mico_priority:
+    priority_type: "all_vs_all" # "all_vs_all" or "current_vs_next"
+    priority_weight: 1.0
+    normalize_priorities: True
 
 # logger
 logger:
@@ -49,11 +54,12 @@ logger:
   project_name: dqn_pixels_grid_word_v0
   group_name: null
   test_interval: 10_000
-  num_test_episodes: 3
-  video: False
-  mode: "disabled" # "online" or "disabled" ("offline" too but not used)
+  num_test_episodes: 5
+  video: True
+  mode: "online" # "online" or "disabled" ("offline" too but not used)
   save_model: False
   save_distributions: True
+  window_size: 100
 
 # Optim
 optim:
@@ -69,7 +75,12 @@ optim:
 
 # loss
 loss:
+  double_dqn: True
   gamma: 0.99
+  mico_loss:
+    mico_weight: 0.01 #0.5
+    mico_beta: 0.1
+    mico_gamma: 0.99
   target_updater:
     type: "hard"
     hard_update_freq: 50  
