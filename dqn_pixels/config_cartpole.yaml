@@ -68,7 +68,7 @@ optim:
 
 # loss
 loss:
-  double_dqn: True
+  double_dqn: False
   gamma: 0.99
   target_updater:
     type: "hard"

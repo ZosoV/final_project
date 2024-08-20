@@ -13,6 +13,7 @@ for seed in "${seeds[@]}"; do
         
         python dqn_mico.py -m \
             env.seed=$seed \
+            collector.eps_start=0.1 \
             buffer.prioritized_replay=True \
             buffer.alpha=0.6 \
             buffer.beta=0.4 \
