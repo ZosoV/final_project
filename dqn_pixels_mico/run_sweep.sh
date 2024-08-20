@@ -1,6 +1,6 @@
 #!/bin/bash
 
-bash run_sweep_MICO.sh
+# bash run_sweep_MICO.sh
 
 bash run_sweep_BPER_aa_priority_weight.sh
 
