@@ -4,3 +4,4 @@ wandb/
 multirun/
 __pycache__/
 results/
+csv_logs/

@@ -1,9 +1,10 @@
 # seeds=(118398 676190 786456) #171936 887739)
 
-seeds=(118398) #171936 887739)
+# seeds=(118398 676190 786456)
+seeds=(786456)
 
 
-priority_weights=(0.1 0.5 0.75) #1.0) # Note: 1.0 I just need to calculate 2 seed more
+priority_weights=(0.1 ) # 0.5 0.75) #1.0) # Note: 1.0 I just need to calculate 2 seed more
 # priority_weights=(1.0) # Note: 1.0 I just need to calculate 2 seed more
 
 # Loop over each seed

@@ -391,7 +391,10 @@ def main(cfg: "DictConfig"):
             td_errors[j].copy_(sampled_tensordict["td_error"].mean().detach())
             
             if prioritized_replay:
-                priorities_per_batch[j].copy_(priority.mean().detach())
+                if normalize_priorities:
+                    priorities_per_batch[j].copy_(priority.mean().detach())
+                else:
+                    priorities_per_batch[j].copy_(torch.log(priority + 1).mean().detach())
                 weights_per_batch[j].copy_(sampled_tensordict["_weight"].mean().detach())
 
             if cfg.logger.save_distributions:

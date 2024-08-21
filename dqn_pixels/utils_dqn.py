@@ -145,8 +145,11 @@ def make_dqn_model(env_name, policy_cfg, frame_skip, cropping = False):
 
 
 def eval_model(actor, test_env, num_episodes=3):
+    eval_seeds = [919409, 711872, 442081, 189061, 117840, 378457, 574025]
+
     test_rewards = torch.zeros(num_episodes, dtype=torch.float32)
     for i in range(num_episodes):
+        test_env.set_seed(eval_seeds[i])
         td_test = test_env.rollout(
             policy=actor,
             auto_reset=True,

@@ -241,7 +241,7 @@ def main(cfg: "DictConfig"):
         test_env.insert_transform(
             0,
             VideoRecorder(
-                logger, tag=f"rendered/{cfg.env.env_name}", in_keys=["pixels"], skip=1
+                logger, tag=f"rendered_{cfg.exp_name}/{cfg.env.env_name}", in_keys=["pixels"], skip=1
             ),
         )
     test_env.eval()
@@ -309,7 +309,8 @@ def main(cfg: "DictConfig"):
 
         # NOTE: I need to calculate the mico_distance for the current data
         # to check statistics of the mico_distance in mico experiments
-        data = calculate_mico_distance(loss_module, data)
+        if cfg.env.enable_mico:
+            data = calculate_mico_distance(loss_module, data)
 
         # NOTE: I need to calculate the td_errors in everything
         data = calculate_td_error(loss_module, data)
@@ -510,7 +511,7 @@ def main(cfg: "DictConfig"):
                 # Saving the exploration matrix
                 if cfg.logger.saving_exploration_matrix:
                     base_name = os.path.basename(cfg.env.grid_file).split(".")[0]
-                    folder_name = f"results/{base_name}"
+                    folder_name = f"results/{cfg.exp_name}_{base_name}"
                     os.makedirs(folder_name, exist_ok=True)    
                     file_name = os.path.join(folder_name, f"visiting_count_{base_name}_frame_{collected_frames}.pt")
                     torch.save(visiting_count, file_name)
