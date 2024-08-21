@@ -47,8 +47,8 @@ from collections import deque
 
 import sys
 import os
-# sys.path.insert(0, os.path.abspath('../'))
-sys.path.insert(0, os.path.abspath('final_project'))
+sys.path.insert(0, os.path.abspath('../'))
+# sys.path.insert(0, os.path.abspath('final_project'))
 
 @hydra.main(config_path=".", config_name="config_gridworld", version_base=None)
 def main(cfg: "DictConfig"):
@@ -265,8 +265,11 @@ def main(cfg: "DictConfig"):
     q_losses = torch.zeros(num_updates, device=device)
     mico_losses = torch.zeros(num_updates, device=device)
     total_losses = torch.zeros(num_updates, device=device)
+
+    mico_priority_weight = cfg.buffer.mico_priority.priority_weight
+    normalize_priorities = cfg.buffer.mico_priority.normalize_priorities
       
-    visiting_count = torch.zeros((test_env.unwrapped.size, test_env.unwrapped.size))
+    visiting_count = torch.zeros((test_env.unwrapped.size, test_env.unwrapped.size), device=device)
 
     # Create a window to store episode rewards as a queue
     window_episode_rewards = deque(maxlen=cfg.logger.window_size)
@@ -306,7 +309,7 @@ def main(cfg: "DictConfig"):
 
         # NOTE: I need to calculate the mico_distance for the current data
         # to check statistics of the mico_distance in mico experiments
-        # data = calculate_mico_distance(loss_module, data)
+        data = calculate_mico_distance(loss_module, data)
 
         # NOTE: I need to calculate the td_errors in everything
         data = calculate_td_error(loss_module, data)
@@ -334,7 +337,12 @@ def main(cfg: "DictConfig"):
             window_episode_rewards.extend(episode_rewards.detach().cpu().numpy())
 
             # Update the general cumulative reward
-            general_cumulative_reward += episode_rewards.sum().item()
+            if cfg.logger.cumulative_reward == "mean":
+                general_cumulative_reward += episode_reward_mean
+            elif cfg.logger.cumulative_reward == "sum":
+                general_cumulative_reward += episode_rewards.sum().item() # episode_length_mean
+            else:
+                raise ValueError(f"cumulative_reward {cfg.logger.cumulative_reward} not recognized")
 
             # NOTE: this log will be updated only if there is a new episode in the current
             # data batch gotten from interaction with the environment
@@ -439,10 +447,22 @@ def main(cfg: "DictConfig"):
             td_error_hist, td_error_mean, td_error_std = get_distribution(replay_buffer.storage['td_error'])
             
             # This is the empirical mico on-policy bisimulation distance
-            # mico_bisim_hist, mico_bisim_mean, mico_bisim_std = get_distribution(replay_buffer.storage['mico_distance'])
+            if cfg.env.enable_mico:
+                mico_bisim_hist, mico_bisim_mean, mico_bisim_std = get_distribution(replay_buffer.storage['mico_distance_metadata'])
 
             if prioritized_replay:
-                priority_hist, priority_mean, priority_std = get_distribution(replay_buffer.storage['td_error'])
+
+                if cfg.env.enable_mico:
+                    norm_td_error = torch.log(replay_buffer.storage['td_error'] + 1)
+                    norm_mico_distance = torch.log(replay_buffer.storage['mico_distance_metadata'] + 1)
+                    
+                    if normalize_priorities:
+                        priority = (1 - mico_priority_weight) * norm_td_error + mico_priority_weight * norm_mico_distance
+                    else:
+                        priority = (1 - mico_priority_weight) * replay_buffer.storage['td_error'] + mico_priority_weight * replay_buffer.storage['mico_distance_metadata']
+                    priority_hist, priority_mean, priority_std = get_distribution(priority)
+                else:
+                    priority_hist, priority_mean, priority_std = get_distribution(replay_buffer.storage['td_error'])
 
                 log_info.update(
                     {
@@ -460,9 +480,15 @@ def main(cfg: "DictConfig"):
                         "replay_buffer/td_error": wandb.Histogram(np_histogram = td_error_hist),
                         "replay_buffer/td_error_mean": td_error_mean,
                         "replay_buffer/td_error_std": td_error_std,
-                        # "replay_buffer/mico_bisimulation_metric": wandb.Histogram(np_histogram = mico_bisim_hist),
-                        # "replay_buffer/mico_bisimulation_mean": mico_bisim_mean,
-                        # "replay_buffer/mico_bisimulation_std": mico_bisim_std,
+                    }
+                )
+
+            if cfg.env.enable_mico:
+                log_info.update(
+                    {
+                        "replay_buffer/mico_bisimulation_metric": wandb.Histogram(np_histogram = mico_bisim_hist),
+                        "replay_buffer/mico_bisimulation_mean": mico_bisim_mean,
+                        "replay_buffer/mico_bisimulation_std": mico_bisim_std,
                     }
                 )
         
@@ -482,19 +508,22 @@ def main(cfg: "DictConfig"):
             if (i >= 1 and (prev_test_frame < cur_test_frame)) or final:
 
                 # Saving the exploration matrix
-                base_name = os.path.basename(cfg.env.grid_file).split(".")[0]
-                folder_name = f"results/{base_name}"
-                os.makedirs(folder_name, exist_ok=True)    
-                file_name = os.path.join(folder_name, f"visiting_count_{base_name}_frame_{collected_frames}.pt")
-                torch.save(visiting_count, file_name)
+                if cfg.logger.saving_exploration_matrix:
+                    base_name = os.path.basename(cfg.env.grid_file).split(".")[0]
+                    folder_name = f"results/{base_name}"
+                    os.makedirs(folder_name, exist_ok=True)    
+                    file_name = os.path.join(folder_name, f"visiting_count_{base_name}_frame_{collected_frames}.pt")
+                    torch.save(visiting_count, file_name)
 
                 # Getting bisimulation matrix for mico experiments
-                # mico_bisim_matrix = get_bisimulation_matrix(loss_module, test_env)
-                # base_name = os.path.basename(cfg.env.grid_file).split(".")[0]
-                # folder_name = f"results/{base_name}"
-                # os.makedirs(folder_name, exist_ok=True)    
-                # file_name = os.path.join(folder_name, f"bisim_matrix_{base_name}_frame_{collected_frames}.pt")
-                # torch.save(mico_bisim_matrix, file_name)
+                if cfg.env.enable_mico and cfg.logger.saving_bisimulation_matrix:
+                    mico_bisim_matrix = get_bisimulation_matrix(loss_module, test_env)
+                    base_name = os.path.basename(cfg.env.grid_file).split(".")[0]
+                    folder_name = f"results/{base_name}"
+                    os.makedirs(folder_name, exist_ok=True)    
+                    file_name = os.path.join(folder_name, f"bisim_matrix_{base_name}_frame_{collected_frames}.pt")
+                    torch.save(mico_bisim_matrix, file_name)
+
 
                 # Evaluating fixed trajectories
                 model.eval()

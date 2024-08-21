@@ -7,7 +7,6 @@ for seed in "${seeds[@]}"; do
 
     python dqn_mico.py -m \
         env.seed=$seed \
-        collector.eps_start=0.1 \
         exp_name=DQN_pixels_MICO_seed_$seed \
     
 done

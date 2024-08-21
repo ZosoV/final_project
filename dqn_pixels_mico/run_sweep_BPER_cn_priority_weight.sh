@@ -19,6 +19,7 @@ for seed in "${seeds[@]}"; do
             buffer.beta=0.4 \
             buffer.mico_priority.priority_type="current_vs_next" \
             buffer.mico_priority.priority_weight=$priority_weight \
+            logger.cumulative_reward="sum" \
             exp_name=DQN_pixels_MICO_BPER_cn_priority_weight_seed_$seed
 
     done

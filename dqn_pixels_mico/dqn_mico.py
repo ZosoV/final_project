@@ -321,7 +321,12 @@ def main(cfg: "DictConfig"):
             window_episode_rewards.extend(episode_rewards.detach().cpu().numpy())
 
             # Update the general cumulative reward
-            general_cumulative_reward += episode_rewards.sum().item()
+            if cfg.logger.cumulative_reward == "mean":
+                general_cumulative_reward += episode_reward_mean
+            elif cfg.logger.cumulative_reward == "sum":
+                general_cumulative_reward += episode_rewards.sum().item() # episode_length_mean
+            else:
+                raise ValueError(f"cumulative_reward {cfg.logger.cumulative_reward} not recognized")
 
             # NOTE: this log will be updated only if there is a new episode in the current
             # data batch gotten from interaction with the environment

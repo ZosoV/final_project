@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 from tensordict import TensorDict
+import utils_metric
+from torchrl.envs.utils import step_mdp
 
 # Create a matrix of all possible states taking into account that
 # state is given by position of agent

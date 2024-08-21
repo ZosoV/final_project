@@ -9,6 +9,8 @@ for seed in "${seeds[@]}"; do
         env.seed=$seed \
         env.env_name=CartPole-v1 \
         logger.project_name=dqn_pixels_cart_pole_v1_sweep \
+        loss.double_dqn=True \
+        logger.cumulative_reward="mean" \
         exp_name=DQN_pixels_baseline_seed_$seed
     
     python dqn.py -m \
@@ -16,6 +18,8 @@ for seed in "${seeds[@]}"; do
         env.env_name=CartPole-v1 \
         logger.project_name=dqn_pixels_cart_pole_v1_sweep \
         buffer.prioritized_replay=True \
+        loss.double_dqn=True \
+        logger.cumulative_reward="mean" \
         exp_name=DQN_pixels_PER_seed_$seed
 
 done
