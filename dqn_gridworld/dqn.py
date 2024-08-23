@@ -34,7 +34,8 @@ from utils_experiments import (
     bisimulation_distribution, 
     get_distribution, 
     get_entropy,
-    get_bisimulation_matrix, )
+    get_bisimulation_matrix,
+    get_distances_distribution)
 
 from utils_modules import MICODQNLoss
 
@@ -48,7 +49,7 @@ from collections import deque
 import sys
 import os
 sys.path.insert(0, os.path.abspath('../'))
-# sys.path.insert(0, os.path.abspath('final_project'))
+# sys.path.insert(0, os.path.abspath('.'))
 
 @hydra.main(config_path=".", config_name="config_gridworld", version_base=None)
 def main(cfg: "DictConfig"):
@@ -87,6 +88,8 @@ def main(cfg: "DictConfig"):
         print(f"Number of data batches: {total_frames // frames_per_batch}")
         print(f"Scheduler Step Size: {scheduler_step_size} with respect to total updates")
 
+    enable_mico = cfg.buffer.mico_priority.enable_mico
+
     device = cfg.device
     if device in ("", None):
         if torch.cuda.is_available():
@@ -120,7 +123,7 @@ def main(cfg: "DictConfig"):
     model = make_dqn_model(cfg.env,
                            cfg.policy, 
                            obs_norm_sd,
-                           cfg.env.enable_mico).to(device)
+                           enable_mico).to(device)
 
 
     # NOTE: annealing_num_steps: number of steps 
@@ -183,7 +186,7 @@ def main(cfg: "DictConfig"):
     )
     
     # Create the loss module
-    if cfg.env.enable_mico:
+    if enable_mico:
         loss_module = MICODQNLoss(
             value_network=model,
             loss_function="l2", 
@@ -309,7 +312,7 @@ def main(cfg: "DictConfig"):
 
         # NOTE: I need to calculate the mico_distance for the current data
         # to check statistics of the mico_distance in mico experiments
-        if cfg.env.enable_mico:
+        if enable_mico:
             data = calculate_mico_distance(loss_module, data)
 
         # NOTE: I need to calculate the td_errors in everything
@@ -384,7 +387,7 @@ def main(cfg: "DictConfig"):
             # Update the priorities
             if prioritized_replay:
                 
-                if cfg.env.enable_mico:
+                if enable_mico:
                     norm_td_error = torch.log(sampled_tensordict["td_error"] + 1)
                     norm_mico_distance = torch.log(sampled_tensordict["mico_distance"] + 1)
                     
@@ -399,7 +402,7 @@ def main(cfg: "DictConfig"):
             # NOTE: This is only one step (after n-updated steps defined before)
             # the target will update
             target_net_updater.step()
-            if cfg.env.enable_mico:
+            if enable_mico:
                 q_losses[j].copy_(loss["td_loss"].detach())
                 mico_losses[j].copy_(loss["mico_loss"].detach())
                 total_losses[j].copy_(loss["loss"].detach())
@@ -408,6 +411,23 @@ def main(cfg: "DictConfig"):
 
         training_time = time.time() - training_start
 
+
+        if cfg.buffer.prioritized_replay:
+            # Calculate the difference between expected and estimated distributions of priorities
+            distance_distribution_uniform, distance_distribution_on_policy = get_distances_distribution(loss_module,
+                                test_env, 
+                                model, 
+                                cfg.buffer, 
+                                replay_buffer,
+                                enable_mico, 
+                                device)
+            
+            log_info.update(
+                {
+                    "replay_buffer/distance_distribution_uniform": distance_distribution_uniform.item(),
+                    "replay_buffer/distance_distribution_on_policy": distance_distribution_on_policy.item(),
+                }
+            )
 
         if scheduler_activated:
             scheduler.step()
@@ -426,7 +446,7 @@ def main(cfg: "DictConfig"):
             }
         )
 
-        if cfg.env.enable_mico:
+        if enable_mico:
             log_info.update(
                 {
                     "train/mico_loss": mico_losses.mean().item(),
@@ -448,12 +468,12 @@ def main(cfg: "DictConfig"):
             td_error_hist, td_error_mean, td_error_std = get_distribution(replay_buffer.storage['td_error'])
             
             # This is the empirical mico on-policy bisimulation distance
-            if cfg.env.enable_mico:
+            if enable_mico:
                 mico_bisim_hist, mico_bisim_mean, mico_bisim_std = get_distribution(replay_buffer.storage['mico_distance_metadata'])
 
             if prioritized_replay:
 
-                if cfg.env.enable_mico:
+                if enable_mico:
                     norm_td_error = torch.log(replay_buffer.storage['td_error'] + 1)
                     norm_mico_distance = torch.log(replay_buffer.storage['mico_distance_metadata'] + 1)
                     
@@ -484,7 +504,7 @@ def main(cfg: "DictConfig"):
                     }
                 )
 
-            if cfg.env.enable_mico:
+            if enable_mico:
                 log_info.update(
                     {
                         "replay_buffer/mico_bisimulation_metric": wandb.Histogram(np_histogram = mico_bisim_hist),
@@ -517,10 +537,10 @@ def main(cfg: "DictConfig"):
                     torch.save(visiting_count, file_name)
 
                 # Getting bisimulation matrix for mico experiments
-                if cfg.env.enable_mico and cfg.logger.saving_bisimulation_matrix:
+                if enable_mico and cfg.logger.saving_bisimulation_matrix:
                     mico_bisim_matrix = get_bisimulation_matrix(loss_module, test_env)
                     base_name = os.path.basename(cfg.env.grid_file).split(".")[0]
-                    folder_name = f"results/{base_name}"
+                    folder_name = f"results/{cfg.exp_name}_{base_name}"
                     os.makedirs(folder_name, exist_ok=True)    
                     file_name = os.path.join(folder_name, f"bisim_matrix_{base_name}_frame_{collected_frames}.pt")
                     torch.save(mico_bisim_matrix, file_name)

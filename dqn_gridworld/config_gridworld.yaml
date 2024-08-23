@@ -10,7 +10,6 @@ env:
   grid_file: "../custom_envs/grid_envs/grid_world2.txt"
   # grid_file: "final_project/custom_envs/grid_envs/grid_world2.txt" # For debugging
   seed: 118398
-  enable_mico: False
   start_state: null
 
 # collector
@@ -44,6 +43,7 @@ buffer:
   alpha: 0.6
   beta: 0.4
   mico_priority:
+    enable_mico: False
     priority_type: "all_vs_all" # "all_vs_all" or "current_vs_next"
     priority_weight: 1.0
     normalize_priorities: False
@@ -55,13 +55,13 @@ logger:
   group_name: null
   test_interval: 10_000
   num_test_episodes: 5
-  video: True
+  video: False
   mode: "online" # "online" or "disabled" ("offline" too but not used)
   save_model: False
   window_size: 100
-  save_distributions: True
-  saving_bisimulation_matrix: True
-  saving_exploration_matrix: True
+  save_distributions: False
+  saving_bisimulation_matrix: False
+  saving_exploration_matrix: False
   cumulative_reward: "sum"
 
 # Optim

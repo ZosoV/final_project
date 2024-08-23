@@ -188,17 +188,19 @@ def calculate_mico_distance_all_states(loss_module, tensordict):
 
     return online_dist
 
-def get_bisimulation_matrix(loss_module, test_env):
-
+def get_all_states(test_env, policy=None):
     all_data_states = []
 
     for state in test_env.unwrapped._possible_states:
         data_state = test_env.reset(options = {"start_state": state})
+        if policy:
+            data_state = test_env.rollout(policy = policy, max_steps = 1)
         all_data_states.append(data_state)
 
-    for state in test_env.unwrapped._targets_location:
-        data_state = test_env.reset(options = {"start_state": state})
-        all_data_states.append(data_state)
+    if policy is None:
+        for state in test_env.unwrapped._targets_location:
+            data_state = test_env.reset(options = {"start_state": state})
+            all_data_states.append(data_state)
 
     keys2unsqueeze = [
         "behavioral_distance",
@@ -211,7 +213,7 @@ def get_bisimulation_matrix(loss_module, test_env):
 
     tmp_dict = {}
     for key in all_data_states[0].keys():
-        if key in keys2unsqueeze:
+        if key in keys2unsqueeze and policy is None:
             tmp_dict[key] = torch.cat([td[key].unsqueeze(0) for td in all_data_states], dim=0)
         else:
             tmp_dict[key] = torch.cat([td[key] for td in all_data_states], dim=0)
@@ -219,10 +221,121 @@ def get_bisimulation_matrix(loss_module, test_env):
     concatenated_data = TensorDict(
         tmp_dict, 
         batch_size=torch.Size([len(all_data_states)]))
+    
+    return concatenated_data
+
+def get_bisimulation_matrix(loss_module, test_env):
+
+    all_states_tensordict = get_all_states(test_env)
 
     # Calculate the bisimulation distance of all vs all
-    distances_all_vs_all = calculate_mico_distance_all_states(loss_module, concatenated_data)
+    distances_all_vs_all = calculate_mico_distance_all_states(loss_module, all_states_tensordict)
 
-    batch_size = len(all_data_states)
+    batch_size = len(all_states_tensordict)
 
     return distances_all_vs_all.reshape((batch_size,batch_size))
+
+def get_priority_all_states(loss_module, test_env, policy, cfg_buffer, enable_mico):
+
+    mico_priority_weight = cfg_buffer.mico_priority.priority_weight
+
+    # Get all states
+    all_states_tensordict = get_all_states(test_env, policy)
+    
+    # Calculate the td error of all states
+    all_states_tensordict = calculate_td_error(loss_module, all_states_tensordict)
+
+    # if enable_mico:
+    #     # Calculate the mico distance of all states
+    #     calculate_mico_distance(loss_module, all_states_tensordict)
+
+    #     if cfg_buffer.mico_priority.normalize_priorities:
+    #         norm_td_error = torch.log(all_states_tensordict["td_error"] + 1)
+    #         norm_mico_distance = torch.log(all_states_tensordict["mico_distance_metadata"] + 1)
+    #         priority = (1 - mico_priority_weight) * norm_td_error + mico_priority_weight * norm_mico_distance
+    #     else:
+    #         priority = (1 - mico_priority_weight) * all_states_tensordict["td_error"] + mico_priority_weight * all_states_tensordict["mico_distance_metadata"]
+    # else:
+    priority = all_states_tensordict["td_error"]
+
+    # Normalize the td_error to get probabilities
+    all_states_tensordict['priority'] = priority ** cfg_buffer.alpha
+    all_states_tensordict['priority'] = priority / priority.max()
+
+    return all_states_tensordict
+
+def estimate_sampling_distribution(test_env, replay_buffer, device):
+
+    # Get all possible states
+    possible_states = np.array(list(test_env.unwrapped._possible_states))
+
+    # Sample 3k of experiences
+    # Concat the samples until reach 3k or larger
+    sample = replay_buffer.sample()
+    while len(sample) < 3000:
+        tmp_sample = replay_buffer.sample()
+        sample = torch.cat([sample, tmp_sample], dim=0)
+
+    # Count the occurrences of each unique index pair
+    unique_observations, counts = torch.unique(sample['observation'], return_counts=True, dim=0)
+    unique_observations = unique_observations.cpu()
+    counts = counts.to(device)
+
+    # Get the counts of the 3000 samples
+    visiting_count = torch.zeros((test_env.unwrapped.size, test_env.unwrapped.size), device=device)
+    visiting_count[unique_observations[:, 0], unique_observations[:, 1]] += counts
+
+    # Normalize the visiting count
+    visiting_count = visiting_count / visiting_count.sum()
+
+    # Access only to the states that are possible
+    estimated_distribution = visiting_count[possible_states[:, 0], possible_states[:, 1]]
+
+    return estimated_distribution
+
+def estimate_on_policy_weight(test_env, replay_buffer, device):
+    # Get all possible states
+    possible_states = np.array(list(test_env.unwrapped._possible_states))
+
+    # Get 3000 uniformely sampled indices from 0 to len(replay_buffer)
+    indices = np.random.choice(len(replay_buffer), 3000)
+
+    # Sample 3k of experiences
+    sample = replay_buffer.storage[indices]
+
+    # Count the occurrences of each unique index pair
+    unique_observations, counts = torch.unique(sample['observation'], return_counts=True, dim=0)
+    unique_observations = unique_observations.cpu()
+    counts = counts.to(device)
+
+    # Get the counts of the 3000 samples
+    visiting_count = torch.zeros((test_env.unwrapped.size, test_env.unwrapped.size), device=device)
+    visiting_count[unique_observations[:, 0], unique_observations[:, 1]] += counts
+
+    # Normalize the visiting count
+    visiting_count = visiting_count / visiting_count.sum()
+
+    # Access only to the states that are possible
+    estimated_distribution = visiting_count[possible_states[:, 0], possible_states[:, 1]]
+
+    return estimated_distribution
+
+def get_distances_distribution(loss_module,
+                              test_env, 
+                              policy, 
+                              cfg_buffer, 
+                              replay_buffer,
+                              enable_mico,
+                              device):
+
+    priority_ideal_distribution = get_priority_all_states(loss_module, test_env, policy, cfg_buffer, enable_mico)
+
+    estimated_distribution = estimate_sampling_distribution(test_env, replay_buffer, device)
+
+    absolute_difference = torch.abs(priority_ideal_distribution['priority'] - estimated_distribution)
+    distance_uniform = absolute_difference.mean()
+    on_policy_weights = estimate_on_policy_weight(test_env, replay_buffer, device)
+    distance_on_policy = (on_policy_weights * absolute_difference).mean()
+    
+    return distance_uniform, distance_on_policy
+    
