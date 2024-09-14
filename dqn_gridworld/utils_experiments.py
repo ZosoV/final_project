@@ -245,22 +245,22 @@ def get_priority_all_states(loss_module, test_env, policy, cfg_buffer, enable_mi
     # Calculate the td error of all states
     all_states_tensordict = calculate_td_error(loss_module, all_states_tensordict)
 
-    # if enable_mico:
-    #     # Calculate the mico distance of all states
-    #     calculate_mico_distance(loss_module, all_states_tensordict)
+    if enable_mico:
+        # Calculate the mico distance of all states
+        calculate_mico_distance(loss_module, all_states_tensordict)
 
-    #     if cfg_buffer.mico_priority.normalize_priorities:
-    #         norm_td_error = torch.log(all_states_tensordict["td_error"] + 1)
-    #         norm_mico_distance = torch.log(all_states_tensordict["mico_distance_metadata"] + 1)
-    #         priority = (1 - mico_priority_weight) * norm_td_error + mico_priority_weight * norm_mico_distance
-    #     else:
-    #         priority = (1 - mico_priority_weight) * all_states_tensordict["td_error"] + mico_priority_weight * all_states_tensordict["mico_distance_metadata"]
-    # else:
-    priority = all_states_tensordict["td_error"]
+        if cfg_buffer.mico_priority.normalize_priorities:
+            norm_td_error = torch.log(all_states_tensordict["td_error"] + 1)
+            norm_mico_distance = torch.log(all_states_tensordict["mico_distance_metadata"] + 1)
+            priority = (1 - mico_priority_weight) * norm_td_error + mico_priority_weight * norm_mico_distance
+        else:
+            priority = (1 - mico_priority_weight) * all_states_tensordict["td_error"] + mico_priority_weight * all_states_tensordict["mico_distance_metadata"]
+    else:
+        priority = all_states_tensordict["td_error"]
 
     # Normalize the td_error to get probabilities
     all_states_tensordict['priority'] = priority ** cfg_buffer.alpha
-    all_states_tensordict['priority'] = priority / priority.max()
+    all_states_tensordict['priority'] = priority / priority.sum()
 
     return all_states_tensordict
 
@@ -335,7 +335,29 @@ def get_distances_distribution(loss_module,
     absolute_difference = torch.abs(priority_ideal_distribution['priority'] - estimated_distribution)
     distance_uniform = absolute_difference.mean()
     on_policy_weights = estimate_on_policy_weight(test_env, replay_buffer, device)
-    distance_on_policy = (on_policy_weights * absolute_difference).mean()
+    distance_on_policy = (on_policy_weights * absolute_difference).sum()
     
     return distance_uniform, distance_on_policy
+    
+def get_relevant_transitions(priorities, experience_replay):
+
+    # Step 1: Get the minimum and maximum indices
+    min_val, min_idx = torch.min(priorities, dim=0)
+    max_val, max_idx = torch.max(priorities, dim=0)
+
+    # Step 2: Calculate the three quartile values
+    q1_val = torch.quantile(priorities, 0.25)
+    q2_val = torch.quantile(priorities, 0.50)
+    q3_val = torch.quantile(priorities, 0.75)
+
+    # Find the indices closest to these quartile values
+    q1_idx = torch.argmin(torch.abs(priorities - q1_val))
+    q2_idx = torch.argmin(torch.abs(priorities - q2_val))
+    q3_idx = torch.argmin(torch.abs(priorities - q3_val))
+
+    # Extract tuples
+    indexes = [min_idx, max_idx, q1_idx, q2_idx, q3_idx]
+
+    return experience_replay[indexes]
+
     

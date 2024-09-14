@@ -35,7 +35,8 @@ from utils_experiments import (
     get_distribution, 
     get_entropy,
     get_bisimulation_matrix,
-    get_distances_distribution)
+    get_distances_distribution,
+    get_relevant_transitions)
 
 from utils_modules import MICODQNLoss
 
@@ -483,6 +484,7 @@ def main(cfg: "DictConfig"):
                         priority = (1 - mico_priority_weight) * replay_buffer.storage['td_error'] + mico_priority_weight * replay_buffer.storage['mico_distance_metadata']
                     priority_hist, priority_mean, priority_std = get_distribution(priority)
                 else:
+                    priority = replay_buffer.storage['td_error']
                     priority_hist, priority_mean, priority_std = get_distribution(replay_buffer.storage['td_error'])
 
                 log_info.update(
@@ -492,6 +494,7 @@ def main(cfg: "DictConfig"):
                         "replay_buffer/priority_std": priority_std,
                     }
                 )
+
 
             log_info.update(
                     {
@@ -504,6 +507,7 @@ def main(cfg: "DictConfig"):
                     }
                 )
 
+
             if enable_mico:
                 log_info.update(
                     {
@@ -512,6 +516,10 @@ def main(cfg: "DictConfig"):
                         "replay_buffer/mico_bisimulation_std": mico_bisim_std,
                     }
                 )
+
+
+
+
         
         
 
@@ -544,6 +552,26 @@ def main(cfg: "DictConfig"):
                     os.makedirs(folder_name, exist_ok=True)    
                     file_name = os.path.join(folder_name, f"bisim_matrix_{base_name}_frame_{collected_frames}.pt")
                     torch.save(mico_bisim_matrix, file_name)
+
+                if prioritized_replay:
+                    # Get relevant transition in buffer
+                    relevant_transitions = get_relevant_transitions(priority, replay_buffer.storage)
+
+                    current_states = relevant_transitions['pixels']
+                    nex_states = relevant_transitions[('next','pixels')]
+
+                    # Undo the normalization
+                    current_states = current_states * obs_norm_sd['scale'] + obs_norm_sd['loc']
+                    nex_states = nex_states * obs_norm_sd['scale'] + obs_norm_sd['loc']
+
+                    # Save the current and next states
+                    base_name = os.path.basename(cfg.env.grid_file).split(".")[0]
+                    folder_name = f"results/{cfg.exp_name}_{base_name}"
+                    os.makedirs(folder_name, exist_ok=True)
+                    current_file_name = os.path.join(folder_name, f"current_states_{base_name}_frame_{collected_frames}")
+                    nex_file_name = os.path.join(folder_name, f"next_states_{base_name}_frame_{collected_frames}")
+                    np.save(current_file_name, current_states)
+                    np.save(nex_file_name, nex_states)
 
 
                 # Evaluating fixed trajectories

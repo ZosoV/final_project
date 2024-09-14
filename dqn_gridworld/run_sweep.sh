@@ -1,18 +1,19 @@
 #!/bin/bash
 
 
-seeds=(118398 676190 786456 171936 887739) # 919409 711872 442081 189061 117840)
+# seeds=(118398 676190 786456 171936 887739) # 919409 711872 442081 189061 117840)
 # seeds=(676190) # 786456 171936 887739 919409 711872 442081 189061 117840)
+seeds=(118398)
 
 
 # Loop over each seed
 for seed in "${seeds[@]}"; do
 
-    python dqn.py -m \
-        env.seed=$seed \
-        buffer.prioritized_replay=False \
-        buffer.mico_priority.enable_mico=False \
-        exp_name=DQN_pixels_baseline_seed_$seed
+    # python dqn.py -m \
+    #     env.seed=$seed \
+    #     buffer.prioritized_replay=False \
+    #     buffer.mico_priority.enable_mico=False \
+    #     exp_name=DQN_pixels_baseline_seed_$seed
 
     python dqn.py -m \
         env.seed=$seed \
@@ -20,11 +21,11 @@ for seed in "${seeds[@]}"; do
         buffer.mico_priority.enable_mico=False \
         exp_name=DQN_pixels_PER_seed_$seed
 
-    python dqn.py -m \
-        env.seed=$seed \
-        buffer.prioritized_replay=False \
-        buffer.mico_priority.enable_mico=True \
-        exp_name=DQN_pixels_MICO_seed_$seed
+    # python dqn.py -m \
+    #     env.seed=$seed \
+    #     buffer.prioritized_replay=False \
+    #     buffer.mico_priority.enable_mico=True \
+    #     exp_name=DQN_pixels_MICO_seed_$seed
 
     python dqn.py -m \
         env.seed=$seed \

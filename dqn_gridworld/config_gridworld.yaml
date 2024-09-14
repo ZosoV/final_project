@@ -8,7 +8,7 @@ exp_name: DQN_pixels
 env:
   env_name: GridWorldEnv-v0
   grid_file: "../custom_envs/grid_envs/grid_world2.txt"
-  # grid_file: "final_project/custom_envs/grid_envs/grid_world2.txt" # For debugging
+  # grid_file: "custom_envs/grid_envs/grid_world2.txt" # For debugging
   seed: 118398
   start_state: null
 
@@ -59,9 +59,9 @@ logger:
   mode: "online" # "online" or "disabled" ("offline" too but not used)
   save_model: False
   window_size: 100
-  save_distributions: False
-  saving_bisimulation_matrix: False
-  saving_exploration_matrix: False
+  save_distributions: True
+  saving_bisimulation_matrix: True
+  saving_exploration_matrix: True
   cumulative_reward: "sum"
 
 # Optim
