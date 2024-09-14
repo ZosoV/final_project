@@ -37,7 +37,7 @@ from collections import deque
 import numpy as np
 np.float_ = np.float64
 
-@hydra.main(config_path=".", config_name="config_cartpole", version_base=None)
+@hydra.main(config_path=".", config_name="config", version_base=None)
 def main(cfg: "DictConfig"):
 
     # Set seeds for reproducibility
