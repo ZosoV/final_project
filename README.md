@@ -7,7 +7,7 @@
 This project aims to improve the efficiency of online reinforcement learning by incorporating bisimulation-based metrics into the experience replay process. Bisimulation Prioritized Experience Replay (BPER) prioritizes experiences based on their behavioral differences, identified using bisimulation metrics, to enhance learning by encouraging more diverse and informative sampling.
 
 ![](latent_space.jpg)
-***MICo Latent Space***. *An illustration of the latent space discovered by MICo Learning, where state representations are grouped based on behavioral similarity. Behaviorally similar states are clustered together (states $x, y$), while dissimilar states are positioned farther apart (states $y, z$).*
+***MICo Latent Space***. *An illustration of the latent space discovered by MICo Learning, where state representations are grouped based on behavioral similarity. Behaviorally similar states are clustered together (states x, y), while dissimilar states are positioned farther apart (states y, z).*
 
 ### Repository Structure
 
