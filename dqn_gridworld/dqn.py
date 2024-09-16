@@ -1,7 +1,16 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
+# LICENSE_Meta file in the root directory of this source tree.
+
+# Modified by Oscar Guarnizo, 2024: 
+
+# Modifications:
+# - Added the implementation of the MICO learning
+# - Added the implementation of the Prioritized Replay Buffer
+# - Added the implementation of the Bisimulation Prioritized Replay Buffer
+# - Added control funcitons to log information using weights and biases
+
 import time
 import datetime
 
