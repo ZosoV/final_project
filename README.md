@@ -7,7 +7,7 @@
 This project aims to improve the efficiency of online reinforcement learning by incorporating bisimulation-based metrics into the experience replay process. Bisimulation Prioritized Experience Replay (BPER) prioritizes experiences based on their behavioral differences, identified using bisimulation metrics, to enhance learning by encouraging more diverse and informative sampling.
 
 ![](latent_space.jpg)
-
+***MICo Latent Space***. *An illustration of the latent space discovered by MICo Learning, where state representations are grouped based on behavioral similarity. Behaviorally similar states are clustered together (states $x, y$), while dissimilar states are positioned farther apart (states $y, z$).*
 
 ### Repository Structure
 
@@ -53,13 +53,19 @@ To set up the environment and install the required packages, run:
 
 ```bash
 conda create -y --name final-project python=3.10
-pip install torchrl torch torchvision torchviz wandb hydra-core tqdm gymnasium gymnasium[classic-control]
+conda activate final-project
+pip install torchrl torch torchvision torchviz wandb
+pip install hydra-core tqdm gymnasium gymnasium[classic-control]
 ```
+
+**Disclaimer**: there could be incompatible issues due to the nvidia driver versions, we
+recommend to set device: cpu in the configuration file for running using the cpu.
+
 ### Usage
 
-1. Run Training: Open a folder with `dqn_<something>\` and run the main script `dqn_<something>.py` to start training.
+1. Run Training: Open a folder with `dqn_<something>\` and run the main script `python dqn_<something>.py` to start training.
 
-2. Monitor Training: Track the training progress using `wandb` or any other configured visualization tool.
+2. Monitor Training: Track the training progress using `wandb` or any other configured visualization tool. The wandb is disabled by default
 
 ### Future Work
 - Extension to continuous action spaces.
