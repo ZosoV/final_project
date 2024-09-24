@@ -73,7 +73,7 @@ optim:
 
 # loss
 loss:
-  double_dqn: True
+  double_dqn: False
   gamma: 0.99
   mico_loss:
     mico_weight: 0.01 #0.5
