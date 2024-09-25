@@ -1,4 +1,4 @@
-name: final-project
+name: rl-project
 channels:
   - conda-forge
   - defaults
@@ -102,7 +102,6 @@ dependencies:
       - pillow==10.4.0
       - protobuf==4.25.4
       - pygame==2.6.0
-      - python-graphviz==0.20.3
       - pyyaml==6.0.1
       - requests==2.32.3
       - sentry-sdk==2.10.0
@@ -115,7 +114,6 @@ dependencies:
       - torch==2.3.1
       - torchrl==0.4.0
       - torchvision==0.18.1
-      - torchviz==0.0.2
       - tqdm==4.66.4
       - triton==2.3.1
       - urllib3==2.2.2
