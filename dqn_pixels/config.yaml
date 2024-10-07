@@ -8,7 +8,7 @@ exp_name: DQN_pixels
 env:
   env_name: MountainCar-v0 # Acrobot-v1 # MountainCar-v0 # CarRacing-v2
   seed: 118398
-  cropping: False
+  cropping: True
 
 # collector
 collector:

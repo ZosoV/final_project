@@ -8,7 +8,7 @@ exp_name: DQN_pixels_MICO
 env:
   env_name: MountainCar-v0 # CarRacing-v2 # LunarLander-v2 # Acrobot-v1 # MountainCar-v0 # CarRacing-v2
   seed: 118398
-  cropping: False
+  cropping: True
 
 # collector
 collector:
@@ -73,7 +73,7 @@ optim:
 
 # loss
 loss:
-  double_dqn: False
+  double_dqn: True
   gamma: 0.99
   mico_loss:
     mico_weight: 0.01 #0.5
