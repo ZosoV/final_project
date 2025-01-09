@@ -14,9 +14,9 @@ env:
 collector:
   total_frames: 1_000_064
   frames_per_batch: 128
-  eps_start: 0.5
-  eps_end: 0.005
-  annealing_frames: 520_000
+  eps_start: 1.0
+  eps_end: 0.001
+  annealing_frames: 270_000
   init_random_frames: 20_000
   frame_skip: 4
 
@@ -28,7 +28,7 @@ policy:
     kernel_sizes: [8, 4, 3]
     strides: [4, 2, 1]
   mlp_net:
-    num_cells: [64, 64]  # Number of units per layer
+    num_cells: [512]  # Number of units per layer
   activation: "ReLU"  # Activation function used in the layers
   use_batch_norm: False
 
@@ -61,10 +61,10 @@ logger:
 
 # Optim
 optim:
-  lr: 0.0015
-  max_grad_norm: 10
+  lr: 0.001
+  max_grad_norm: null
   weight_decay: 0.00001
-  eps: 1.5e-4 # default: 1e-08 # rainbow 1.5e-4
+  eps: 3.125e-4 # default: 1e-08 # rainbow 1.5e-4
   scheduler:
     active: False
     type: "stepLR"
@@ -81,7 +81,7 @@ loss:
     mico_gamma: 0.99
   target_updater:
     type: "hard"
-    hard_update_freq: 50  
+    hard_update_freq: 100  
     num_updates: 1
 
   # target_updater:

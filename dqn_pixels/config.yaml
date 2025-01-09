@@ -28,7 +28,7 @@ policy:
     kernel_sizes: [8, 4, 3]
     strides: [4, 2, 1]
   mlp_net:
-    num_cells: [64, 64]  # Number of units per layer
+    num_cells: [512]  # Number of units per layer
   activation: "ReLU"  # Activation function used in the layers
   use_batch_norm: False
 
