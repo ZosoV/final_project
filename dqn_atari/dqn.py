@@ -44,7 +44,7 @@ from utils_dqn import (
     print_hyperparameters,
     update_tensor_dict_next_next_rewards
 )
-from utils_modules import MICODQNLoss
+from utils_modules import MICODQNLoss, MovingAverageNormalization, DQNLogger
 
 import tempfile
 
@@ -71,10 +71,21 @@ def main(cfg: "DictConfig"):
 
     # Set variables
     frame_skip = cfg.collector.frame_skip
-    total_frames = cfg.num_iterations * cfg.collector.training_steps 
+    total_frames = cfg.collector.num_iterations * cfg.collector.training_steps 
     frames_per_batch = cfg.collector.frames_per_batch
     init_random_frames = cfg.collector.init_random_frames
-    test_interval = cfg.collector.training_steps
+    training_steps = cfg.collector.training_steps
+
+    grad_clipping = True if cfg.optim.max_grad_norm is not None else False
+    max_grad = cfg.optim.max_grad_norm
+    batch_size = cfg.buffer.batch_size
+    prioritized_replay = cfg.buffer.prioritized_replay
+    mico_priority_weight = cfg.buffer.mico_priority.priority_weight
+    enable_mico = cfg.loss.mico_loss.enable
+
+    # Evaualation
+    enable_evaluation = cfg.logger.evaluation.enable
+    num_eval_episodes = cfg.logger.evaluation.num_episodes
 
 
     device = cfg.device
@@ -88,24 +99,23 @@ def main(cfg: "DictConfig"):
     # Print the current seed and group
     print(f"Running with Seed: {seed} on Device: {device}")
 
-    # Get current date and time
+    # Init logger
     current_date = datetime.datetime.now()
     date_str = current_date.strftime("%Y_%m_%d-%H_%M_%S")  # Includes date and time
-
-    # Initialize wandb
-    wandb.init(
-        project=cfg.logger.project_name,
-        config=dict(cfg),
-        group=cfg.logger.group_name,
-        name=f"{cfg.exp_name}_{cfg.env.env_name}_{date_str}",
+    logger = DQNLogger(
+        project_name=cfg.logger.project_name,
+        run_name=f"{cfg.exp_name}_{cfg.env.env_name}_{date_str}",
         mode=cfg.logger.mode,
+        config=dict(cfg),
+        log_interval=cfg.collector.training_steps,
     )
 
     # Make the components
     # Policy
     model = make_dqn_model(cfg.env.env_name, 
                            cfg.policy, 
-                           frame_skip).to(device)
+                           frame_skip,
+                           enable_mico).to(device)
 
 
     # NOTE: annealing_num_steps: number of steps 
@@ -168,18 +178,29 @@ def main(cfg: "DictConfig"):
         sampler = sampler,
         priority_key="total_priority"
     )
+
+    # Create a moving average for the priorities
+    if cfg.buffer.mico_priority.moving_average is not None:
+        normalizer = MovingAverageNormalization(momentum=0.1)
     
     # Create the loss module
-    loss_module = MICODQNLoss(
-        value_network=model,
-        loss_function="l2", 
-        delay_value=True, # delay_value=True means we will use a target network
-        double_dqn=cfg.loss.double_dqn,
-        mico_beta=cfg.loss.mico_loss.mico_beta,
-        mico_gamma=cfg.loss.mico_loss.mico_gamma,
-        mico_weight=cfg.loss.mico_loss.mico_weight,
-        priority_type=cfg.buffer.mico_priority.priority_type,
-    )
+    if enable_mico:
+        loss_module = MICODQNLoss(
+            value_network=model,
+            loss_function="l2", 
+            delay_value=True, # delay_value=True means we will use a target network
+            double_dqn=cfg.loss.double_dqn,
+            mico_beta=cfg.loss.mico_loss.mico_beta,
+            mico_gamma=cfg.loss.mico_loss.mico_gamma,
+            mico_weight=cfg.loss.mico_loss.mico_weight,
+            priority_type=cfg.buffer.mico_priority.priority_type,
+        )
+    else:
+        loss_module = DQNLoss(
+            value_network=model,
+            loss_function="l2", 
+            delay_value=True, # delay_value=True means we will use a target network
+        )
     # NOTE: additional line for Atari games
     loss_module.set_keys(done="end-of-life", terminated="end-of-life")
     
@@ -196,8 +217,7 @@ def main(cfg: "DictConfig"):
     optimizer = torch.optim.Adam(loss_module.parameters(), 
                                  lr=cfg.optim.lr, #
                                  eps=cfg.optim.eps)
-    # Create the logger
-    logger = None
+
 
     # Create the test environment
     # NOTE: new line
@@ -206,42 +226,12 @@ def main(cfg: "DictConfig"):
                         device,
                         seed=cfg.env.seed, 
                         is_test=True)
-    if cfg.logger.video:
-        test_env.insert_transform(
-            0,
-            VideoRecorder(
-                logger, tag=f"rendered/{cfg.env.env_name}", in_keys=["pixels"]
-            ),
-        )
     test_env.eval()
 
     # Main loop
-    collected_frames = 0
+    collected_frames = 0 # Also corresponds to the current step
     total_episodes = 0
-    start_time = time.time()
-    grad_clipping = True if cfg.optim.max_grad_norm is not None else False
-    max_grad = cfg.optim.max_grad_norm
-    batch_size = cfg.buffer.batch_size
-    test_interval = test_interval
-    num_test_episodes = cfg.logger.num_test_episodes
-    prioritized_replay = cfg.buffer.prioritized_replay
-    scheduler_activated = cfg.optim.scheduler.active
-    frames_per_batch = frames_per_batch
     pbar = tqdm.tqdm(total=total_frames)
-    init_random_frames = init_random_frames
-    sampling_start = time.time()
-    priority_type = cfg.buffer.mico_priority.priority_type
-    mico_priority_weight = cfg.buffer.mico_priority.priority_weight
-    normalize_priorities = cfg.buffer.mico_priority.normalize_priorities
-
-
-    # Create a window to store episode rewards as a queue
-    cycle_episode_rewards = deque(maxlen=cfg.collector.training_steps)
-    cycle_episode_lengths = deque(maxlen=cfg.collector.training_steps)
-
-    # Save the total cumulative rewards over the episodes
-    general_cumulative_reward = 0
-
 
     # NOTE: IMPORTANT: collectors allows me to collect transitions in a different way
     # than the one I am get used to.
@@ -265,72 +255,53 @@ def main(cfg: "DictConfig"):
     # will corresponds to the size of the batch. Practically, in each transition in the 
     # rollout a frist frame is removed and a new frame is added
 
-    for i, data in enumerate(collector):
+    start_time = time.time()
 
-        log_info = {}
-        sampling_time = time.time() - sampling_start
-        pbar.update(data.numel())
+    c_iter = iter(collector)
 
-        # NOTE: This reshape must be for frame data (maybe)
-        data = data.reshape(-1)
-        collected_frames += frames_per_batch
-        greedy_module.step(frames_per_batch)
+    for iteration in range(cfg.num_iterations):
 
-        # Update data before passing to the replay buffer
-        # NOTE: It's needed to record the next_next_rewards only
-        # for the priority type current vs next
-
-        # NOTE: I need this if I use the distance calculation
-        # using the rewards, but as I am using the online network
-        # I am not using the rewards
-
-        # if priority_type == "current_vs_next":
-        #     data = update_tensor_dict_next_next_rewards(data)
-
-        # NOTE: I need to calculate the mico_distance for the current data
-        # to check statistics of the mico_distance
-        # data = loss_module.calculate_mico_distance(data)
-
-        replay_buffer.extend(data)
-
-        # Get and log training rewards and episode lengths
-        # Collect the episode rewards and lengths in average over the
-        # transitions in the current data batch
-        episode_rewards = data["next", "episode_reward"][data["next", "done"]]
-
-        # TODO: The basic things I'm gonna log are:
-        # num_episodes: number of episodes in the cycle
-        # average_return: average return of the episodes in the cycle
-        # average_steps_per_second: average steps per second in the cycle
-
-
-        # When there are at least one done trajectory in the data batch
-        if len(episode_rewards) > 0:
-
-            # Logging episodes in a window
-            cycle_episode_rewards.extend(episode_rewards.detach().cpu().numpy())
-
-            # Get the number of episodes
-            total_episodes += data["next", "done"].sum()
-
-            # Get episode length
-            episode_length = data["next", "step_count"][data["next", "done"]]
-            cycle_episode_lengths.extend(episode_length.detach().cpu().numpy())
-
-
-        # Warmup phase (due to the continue statement)
-        # Additionally This help us to keep a track of the collected_frames
-        # after the init_random_frames
-        if collected_frames < init_random_frames:
-            continue
-
-        # optimization steps
+        i = 0
+        
         training_start = time.time()
-        for j in range(num_updates):
-            
-            sampled_tensordict = replay_buffer.sample(batch_size)
-            # TODO: check if the sample is already in the device
-            sampled_tensordict = sampled_tensordict.to(device)
+        while i < training_steps:
+            data = next(c_iter)
+        
+            pbar.update(data.numel())
+
+            # NOTE: This reshape must be for frame data (maybe)
+            data = data.reshape(-1)
+            collected_frames += frames_per_batch
+            greedy_module.step(frames_per_batch)
+
+            # if enable_mico:
+            #     data = calculate_mico_distance(loss_module, data)
+
+            # Update data before passing to the replay buffer
+            # NOTE: It's needed to record the next_next_rewards only
+            # for the priority type current vs next
+
+            # NOTE: I need this if I use the distance calculation
+            # using the rewards, but as I am using the online network
+            # I am not using the rewards
+
+            # if priority_type == "current_vs_next":
+            #     data = update_tensor_dict_next_next_rewards(data)
+
+            # NOTE: I need to calculate the mico_distance for the current data
+            # to check statistics of the mico_distance
+            # data = loss_module.calculate_mico_distance(data)
+
+            replay_buffer.extend(data)
+
+            # Warmup phase (due to the continue statement)
+            # Additionally This help us to keep a track of the collected_frames
+            # after the init_random_frames
+            if collected_frames < init_random_frames:
+                continue
+
+            # optimization steps            
+            sampled_tensordict = replay_buffer.sample(batch_size).to(device)
 
             # Also the loss module will use the current and target model to get the q-values
             loss = loss_module(sampled_tensordict)
@@ -343,142 +314,63 @@ def main(cfg: "DictConfig"):
                 )
             optimizer.step()
 
-
             # Update the priorities
             if prioritized_replay:
-                # norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].min()) / (sampled_tensordict["td_error"].max() - sampled_tensordict["td_error"].min())
-                # norm_mico_distance = (sampled_tensordict["mico_distance"] - sampled_tensordict["mico_distance"].min()) / (sampled_tensordict["mico_distance"].max() - sampled_tensordict["mico_distance"].min())
-                norm_td_error = torch.log(sampled_tensordict["td_error"] + 1)
-                norm_mico_distance = torch.log(sampled_tensordict["mico_distance"] + 1)
-                
-                if normalize_priorities:
-                    priority = (1 - mico_priority_weight) * norm_td_error + mico_priority_weight * norm_mico_distance
+                if enable_mico:
+                    priority = (1 - mico_priority_weight) * sampled_tensordict["td_error"]
+                    priority += mico_priority_weight * sampled_tensordict["mico_distance"]
                 else:
-                    priority = (1 - mico_priority_weight) * sampled_tensordict["td_error"] + mico_priority_weight * sampled_tensordict["mico_distance"]
+                    priority = sampled_tensordict["td_error"]
+
+                if cfg.buffer.mico_priority.moving_average is not None:
+                    # Update the moving average statistics
+                    normalizer.update_statistics(priority)
+
+                    # Normalize the tensor
+                    priority = normalizer.normalize(priority)
+                
                 replay_buffer.update_priority(index=sampled_tensordict['index'], priority = priority)
 
             # NOTE: This is only one step (after n-updated steps defined before)
             # the target will update
             target_net_updater.step()
-            q_losses[j].copy_(loss["td_loss"].detach())
-            mico_losses[j].copy_(loss["mico_loss"].detach())
-            total_losses[j].copy_(loss["loss"].detach())
 
-            # Priorities infor to log
-            mico_distances[j].copy_(sampled_tensordict["mico_distance"].mean().detach())
-            td_errors[j].copy_(sampled_tensordict["td_error"].mean().detach())
-            
-            if prioritized_replay:
-                if normalize_priorities:
-                    priorities_per_batch[j].copy_(priority.mean().detach())
-                else:
-                    priorities_per_batch[j].copy_(torch.log(priority + 1).mean().detach())
-                weights_per_batch[j].copy_(sampled_tensordict["_weight"].mean().detach())
+            # update weights of the inference policy
+            # NOTE: Updates the policy weights if the policy of the data 
+            # collector and the trained policy live on different devices.
+            collector.update_policy_weights_()
+        
+            logger.log_per_step_info(data)
 
-            if cfg.logger.save_distributions:
-                # NOTE: Have in mind that if you use normalized priorities you are getting
-                # the log twice so it's better to get with no normalized priorities
-                norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].mean()) / sampled_tensordict["td_error"].std()
-                log_td_error = torch.log(sampled_tensordict["td_error"] + 1)
 
-                norm_mico_distance = (sampled_tensordict["mico_distance"] - sampled_tensordict["mico_distance"].mean()) / sampled_tensordict["mico_distance"].std()
-                log_mico_distance = torch.log(sampled_tensordict["mico_distance"] + 1)
 
-                if normalize_priorities:
-                    # Max-min normalization of the td_error and mico_distance
-                    max_min_norm_td_error = (sampled_tensordict["td_error"] - sampled_tensordict["td_error"].min()) / (sampled_tensordict["td_error"].max() - sampled_tensordict["td_error"].min())
-                    max_mim_norm_mico_distance = (sampled_tensordict["mico_distance"] - sampled_tensordict["mico_distance"].min()) / (sampled_tensordict["mico_distance"].max() - sampled_tensordict["mico_distance"].min())
-                    priority = (1 - mico_priority_weight) * max_min_norm_td_error + mico_priority_weight * max_mim_norm_mico_distance
-                else:
-                    priority = (1 - mico_priority_weight) * sampled_tensordict["td_error"] + mico_priority_weight * sampled_tensordict["mico_distance"]
+        # TODO: plot distributions of the mico distance in the replay buffer
+        #       plot distributions of the td_error in the replay buffer
+        # if cfg.logger.save_distributions:
+        #     logger.log_info.update(
+        #             {
+        #                 "train/buffer_mico_distance_dist": wandb.Histogram(replay_buffer["mico_distance_metadata"].detach()),
+        #             }
+        #         )
 
-                
-                norm_priority = (priority - priority.mean()) / priority.std()
-                log_priority = torch.log(priority + 1)
-
-                log_weight = torch.log(sampled_tensordict["_weight"] + 1)
-                norm_weight = (sampled_tensordict["_weight"] - sampled_tensordict["_weight"].mean()) / sampled_tensordict["_weight"].std()
-                
-                log_info.update(
-                    {
-                        "train/td_error_dist": wandb.Histogram(sampled_tensordict["td_error"].detach().cpu()),
-                        "train/log_td_error_dist": wandb.Histogram(log_td_error.detach().cpu()),
-                        "train/norm_td_error_dist": wandb.Histogram(norm_td_error.detach().cpu()),
-                        "train/mico_distance_dist": wandb.Histogram(sampled_tensordict["mico_distance"].detach().cpu()),
-                        "train/log_mico_distance_dist": wandb.Histogram(log_mico_distance.detach().cpu()),
-                        "train/norm_mico_distance_dist": wandb.Histogram(norm_mico_distance.detach().cpu()),
-                        "train/weight_dist": wandb.Histogram(sampled_tensordict["_weight"].detach().cpu()),
-                        "train/log_weight_dist": wandb.Histogram(log_weight.detach().cpu()),
-                        "train/norm_weight_dist": wandb.Histogram(norm_weight.detach().cpu()),
-                        "train/priority_dist": wandb.Histogram(priority.detach().cpu()),
-                        "train/log_priority_dist": wandb.Histogram(log_priority.detach().cpu()),
-                        "train/norm_priority_dist": wandb.Histogram(norm_priority.detach().cpu()),
-                    }
-                )
+        # TODO: After one iteration run evaluation if required
+        # if logger.evaluation.enable:
+        #     #
 
         training_time = time.time() - training_start
+        average_steps_per_second =  logger.data["num_steps"] / training_time
 
-
-        # Get and log q-values, loss, epsilon, sampling time and training time
-        log_info.update(
-            {
-                "train/q_values": (data["action_value"] * data["action"]).sum().item()
-                / frames_per_batch,
-                "train/q_mean_values": data["action_value"].mean().item(),
-                "train/q_loss": q_losses.mean().item(),
-                "train/mico_loss": mico_losses.mean().item(),
-                "train/total_loss": total_losses.mean().item(),
-                "train/batch_avg_mico_distance": mico_distances.mean().item(),
-                "train/batch_avg_td_error": td_errors.mean().item(),
-                "train/batch_avg_priority": priorities_per_batch.mean().item(),
-                "train/batch_avg_weight": weights_per_batch.mean().item(),
-                # "train/buffer_avg_mico_distance": replay_buffer["mico_distance_metadata"].mean().item(),
-                "train/epsilon": greedy_module.eps,
-                "train/lr": optimizer.param_groups[0]["lr"],
-                # "train/sampling_time": sampling_time,
-                # "train/training_time": training_time,
-            }
-        )
-
-        # if cfg.logger.log_buffer_info:
-        #     log_info.update(
-        #         {
-        #             "train/buffer_mico_distance_dist": wandb.Histogram(replay_buffer["mico_distance_metadata"].detach()),
-        #         }
-        #     )
-
-        # Get and log evaluation rewards and eval time
-        # NOTE: As I'm using only the model and not the model_explore that will deterministic I think
-        with torch.no_grad(): #, set_exploration_type(ExplorationType.DETERMINISTIC):
-
-            # NOTE: Check how we are using the frames here because it seems that I am dividing 
-            # 10 for 50000
-            prev_test_frame = ((i - 1) * frames_per_batch) // test_interval
-            cur_test_frame = (i * frames_per_batch) // test_interval
-            final = current_frames >= collector.total_frames
-
-            # compara prev_test_frame < cur_test_frame is the same as current_frames % test_interval == 0
-            if (i >= 1 and (prev_test_frame < cur_test_frame)) or final:
-                model.eval()
-                eval_start = time.time()
-                test_rewards = eval_model(model, test_env, num_test_episodes)
-                eval_time = time.time() - eval_start
-                model.train()
-                log_info.update(
-                    {
-                        "eval/reward": test_rewards,
-                        # "eval/eval_time": eval_time,
-                    }
-                )
-
-        # Log all the information
-        wandb.log(log_info, step=collected_frames)
-
-        # update weights of the inference policy
-        # NOTE: Updates the policy weights if the policy of the data 
-        # collector and the trained policy live on different devices.
-        collector.update_policy_weights_()
-        sampling_start = time.time()
+        # After one iteration flush the information to wandb
+        logger.log_info.update({"train/epsilon": greedy_module.eps,
+                                "train/average_q_value": (data["action_value"] * data["action"]).detach().mean().item(),
+                                "train/average_total_loss": loss["loss"].detach().mean().item(),
+                                "train/average_td_loss": loss["td_loss"].detach().mean().item(),
+                                "train/average_mico_loss": loss["mico_loss"].detach().mean().item() if enable_mico else 0,
+                                "train/average_steps_per_second": average_steps_per_second,
+                                })
+        
+        # this function will internally call log_per_iteration_info
+        logger.flush_to_wandb(collected_frames)
 
     collector.shutdown()
     end_time = time.time()
@@ -490,7 +382,7 @@ def main(cfg: "DictConfig"):
     print_hyperparameters(cfg)
 
     # TODO: Saved the model. Check how to save the model and load
-    if cfg.logger.save_model:
+    if cfg.logger.save_checkpoints:
         torch.save(model.state_dict(), f"outputs/models/{cfg.exp_name}_{cfg.env.env_name}_{date_str}.pt")
 
 

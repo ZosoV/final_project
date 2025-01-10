@@ -46,22 +46,19 @@ buffer:
     beta: 0.4 # beta: importance sampling exponent
     priority_type: "current_vs_next" # "all_vs_all" or "current_vs_next"
     priority_weight: 1.0 # 1.0 full BPER and 0 PER
-    normalize_priorities: False
+    moving_average: null
 
 
 # logger
 logger:
   backend: wandb
-  project_name: test_atari # dqn_pixels_car_racing_v2_sweep # dqn_pixels_acrobot_v1_sweep # dqn_pixels_Acrobot-v1_sweep # dqn_pixels_mountain_car_v0_sweep # dqn_pixels_car_racing_v2_sweep
-  video: False
-  mode: "online" # "online" or "disabled" ("offline" too but not used)
-  save_model: False
+  project_name: test_atari
+  mode: "disabled" # "online" or "disabled" ("offline" too but not used)
+  save_checkpoints: False
   save_distributions: False
-  cumulative_reward: "sum"
-  window_size: 100
   evaluation:
     enable: False
-    num_test_episodes: 5
+    num_episodes: 5
 
 # Optim
 optim:
@@ -72,10 +69,11 @@ optim:
 # loss
 loss:
   double_dqn: False
-  gamma: 0.99 # [DONE]
+  gamma: 0.99 #
   target_update_period: 8_000 
   mico_loss:
-    mico_weight: 0.01 #0.5
+    enable: False
+    mico_weight: 0.01 #0.5 # 0.01 for DQN and Rainbow
     mico_beta: 0.1
     mico_gamma: 0.99
 

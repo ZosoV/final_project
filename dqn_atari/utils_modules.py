@@ -2,8 +2,12 @@ from torchrl.objectives import DQNLoss
 from tensordict import TensorDict, TensorDictBase
 import torch
 from torch.nn.functional import huber_loss
+from collections import deque
 
 import utils_metric
+import wandb
+import numpy as np
+
 # from . import utils_metric
 
 class MICODQNLoss(DQNLoss):
@@ -309,3 +313,139 @@ class MICODQNNetwork(torch.nn.Module):
                 x = self.activation_class(fc_layer(x))
         q_values = self.output_layer(x)
         return q_values, representation
+    
+class MovingAverageNormalization:
+    def __init__(self, momentum=0.01, epsilon=1e-4):
+        """
+        Initialize the MovingAverageNormalization.
+        
+        Args:
+        - momentum: The momentum for moving average update. (0 < momentum < 1)
+        - epsilon: A small value to prevent division by zero.
+        """
+        self.momentum = momentum
+        self.epsilon = epsilon
+        self.mean = None
+        self.std = None
+    
+    def update_statistics(self, tensor):
+        """
+        Update the moving mean and standard deviation using the input tensor.
+        
+        Args:
+        - tensor: Input tensor of shape [batch_size, 1] or similar.
+        """
+        current_mean = tensor.mean(dim=0, keepdim=True)
+        current_std = tensor.std(dim=0, keepdim=True)
+
+        if self.mean is None or self.std is None:
+            # Initialize mean and std with the first batch's statistics
+            self.mean = current_mean
+            self.std = current_std
+        else:
+            # Update moving average mean and std
+            self.mean = self.momentum * current_mean + (1 - self.momentum) * self.mean
+            self.std = self.momentum * current_std + (1 - self.momentum) * self.std
+
+    def normalize(self, tensor):
+        """
+        Normalize the tensor using the moving average statistics.
+        
+        Args:
+        - tensor: Input tensor of shape [batch_size, 1] or similar.
+        
+        Returns:
+        - Normalized tensor.
+        """
+        if self.mean is None or self.std is None:
+            raise ValueError("Statistics must be initialized by calling `update_statistics` first.")
+        
+        return (tensor - self.mean) / (self.std + self.epsilon)
+    
+
+
+class DQNLogger:
+    def __init__(self, project_name, run_name, log_interval, config, mode):
+        """
+        Custom logger for DQN training.
+
+        Args:
+        - project_name (str): Name of the W&B project.
+        - run_name (str): Name of the W&B run.
+        - log_interval (int): Interval (in episodes) for logging to W&B.
+        """
+        self.project_name = project_name
+        self.run_name = run_name
+        self.log_interval = log_interval
+
+        # Metrics to track
+        self.data = {
+            "sum_returns": 0,
+            "num_episodes": 0,
+            "num_steps": 0,
+            "total_episodes": 0,
+        }
+
+        # Log info to flush to W&B
+        self.log_info = {}
+
+        # Initialize W&B
+        wandb.init(project=self.project_name, 
+                   name=self.run_name,
+                   config=config,
+                   mode=mode)
+        print(f"W&B initialized: Project={self.project_name}, Run={self.run_name}")
+
+    def log_per_step_info(self, data_steps):
+            episode_returns = data_steps["next", "episode_reward"][data_steps["next", "done"]]
+
+            # When there are at least one done trajectory in the data batch
+            if len(episode_returns) > 0:
+
+                # Logging episodes in a window
+                self.data["sum_returns"] += episode_returns.sum().detach().item()
+
+                # Get the number of episodes
+                self.data["total_episodes"] += data_steps["next", "done"].sum().detach().item()
+
+                # Get episode length
+                num_steps = data_steps["next", "step_count"][data_steps["next", "done"]]
+                self.data["num_steps"] += num_steps.sum().detach().item()
+
+    def log_per_iteration_info(self):
+        self.log_info.update({
+            "train/average_return": self.data["sum_returns"] / self.data["total_episodes"],
+            "train/num_episodes": self.data["total_episodes"],
+        })
+
+    def flush_to_wandb(self, current_step):
+        """
+        Flushes the current metrics to W&B and resets the data lists.
+
+        Args:
+        - episode (int): Current episode number.
+        """
+
+        self.log_per_iteration_info()
+
+        wandb.log(self.log_info, step=current_step)
+        print(f"Logged data to W&B at current_step: {current_step}")
+
+        # Reset the lists
+        self.reset()
+
+    def reset(self):
+        """Resets all tracked data."""
+        for key in self.data:
+            self.data[key] = deque(maxlen=self.log_interval)
+
+    def save_checkpoint(self, checkpoint_path):
+        """
+        Save the logger data to a file for checkpointing.
+
+        Args:
+        - checkpoint_path (str): Path to save the checkpoint.
+        """
+        with open(checkpoint_path, "w") as f:
+            f.write(str(self.data))
+        print(f"Logger checkpoint saved at {checkpoint_path}")

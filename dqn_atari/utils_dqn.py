@@ -123,7 +123,7 @@ def update_tensor_dict_next_next_rewards(tensordict):
 # Model utils
 # --------------------------------------------------------------------
 
-def make_dqn_modules_pixels(proof_environment, policy_cfg):
+def make_dqn_modules_pixels(proof_environment, policy_cfg, enable_mico = False):
 
     # Define input shape
     input_shape = proof_environment.observation_spec["pixels"].shape
@@ -149,12 +149,17 @@ def make_dqn_modules_pixels(proof_environment, policy_cfg):
         num_cells_mlp=list(policy_cfg.mlp_net.num_cells),
         activation_class=activation_class,
         use_batch_norm=policy_cfg.use_batch_norm,
+        enable_mico = enable_mico,
     )
 
-    q_net = TensorDictModule(q_net,
-        in_keys=["pixels"], 
-        out_keys=["action_value", "representation"])
-
+    if enable_mico:
+        q_net = TensorDictModule(q_net,
+            in_keys=["pixels"], 
+            out_keys=["action_value", "representation"])
+    else:
+        q_net = TensorDictModule(q_net,
+            in_keys=["pixels"], 
+            out_keys=["action_value"])
 
     # NOTE: Do I need CompositeSpec here?
     # I think I only need proof_environment.action_spec
@@ -166,9 +171,9 @@ def make_dqn_modules_pixels(proof_environment, policy_cfg):
     return qvalue_module
 
 
-def make_dqn_model(env_name, policy_cfg, frame_skip, cropping = False):
+def make_dqn_model(env_name, policy_cfg, frame_skip, cropping = False, enable_mico = False):
     proof_environment = make_env(env_name, frame_skip = frame_skip, device="cpu", cropping = cropping)
-    qvalue_module = make_dqn_modules_pixels(proof_environment, policy_cfg)
+    qvalue_module = make_dqn_modules_pixels(proof_environment, policy_cfg, enable_mico = enable_mico)
     del proof_environment
     return qvalue_module
 
