@@ -213,5 +213,3 @@ def print_hyperparameters(cfg):
             print(f"{key}:")
             for k, v in cfg[key].items():
                 print(f"  {k}: {v}")
-
-

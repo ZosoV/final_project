@@ -53,8 +53,15 @@ from collections import deque
 import numpy as np
 np.float_ = np.float64
 
+import gymnasium as gym
+import ale_py
+
+
 @hydra.main(config_path=".", config_name="config", version_base=None)
 def main(cfg: "DictConfig"):
+
+    # Register the environments
+    gym.register_envs(ale_py)
 
     # Set seeds for reproducibility
     seed = cfg.env.seed
@@ -67,7 +74,7 @@ def main(cfg: "DictConfig"):
         # NOTE: This step is needed to have reproducibility
         # But it reduces a little bit the performance
         # if I don't need reproducibility I could comment this line
-        torch.backends.cudnn.benchmark = False
+        # torch.backends.cudnn.benchmark = False
 
     # Set variables
     frame_skip = cfg.collector.frame_skip
