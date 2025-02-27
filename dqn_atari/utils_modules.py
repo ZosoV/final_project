@@ -102,43 +102,44 @@ class MICODQNLoss(DQNLoss):
 
         # I even could use the mico error as the priority, but I think it's better to use the distance
         
-        with torch.no_grad():
+        if self.priority_type != "PER":
+            with torch.no_grad():
 
-            # NOTE: IMPORTANT: Check if makes sense to compare online vs target, or only online
-            # or only target
-            if self.priority_type == "current_vs_next":
-                mico_distance = utils_metric.current_vs_next_mico_priorities(
-                    current_state_representations = representations, # online representation of current states
-                    next_state_representations = target_next_r, # target representation of next states
-                    mico_beta = self.mico_beta)
-            elif self.priority_type == "all_vs_all":
-                # It doesn't require new computations, only reshape and mean
-                # Notice (as we are not collecting trajectories of two anymore)
-                # We already calculate the distance, which is the online distance
-                # NOTE: However there could be other variants as compare
-                # the online vs online
-                # or target vs target
-                mico_distance = utils_metric.all_vs_all_mico_priorities(
-                            # first_batch_representation = representations,
-                            # second_batch_representation = target_r,
-                            batch_size = representations.shape[0],
-                            mico_beta = self.mico_beta,
-                            distance_tensor=online_dist)
-            else:
-                raise ValueError("Invalid priority type")
+                # NOTE: IMPORTANT: Check if makes sense to compare online vs target, or only online
+                # or only target
+                if self.priority_type == "BPERcn":
+                    mico_distance = utils_metric.current_vs_next_mico_priorities(
+                        current_state_representations = representations, # online representation of current states
+                        next_state_representations = target_next_r, # target representation of next states
+                        mico_beta = self.mico_beta)
+                elif self.priority_type == "BPERaa":
+                    # It doesn't require new computations, only reshape and mean
+                    # Notice (as we are not collecting trajectories of two anymore)
+                    # We already calculate the distance, which is the online distance
+                    # NOTE: However there could be other variants as compare
+                    # the online vs online
+                    # or target vs target
+                    mico_distance = utils_metric.all_vs_all_mico_priorities(
+                                # first_batch_representation = representations,
+                                # second_batch_representation = target_r,
+                                batch_size = representations.shape[0],
+                                mico_beta = self.mico_beta,
+                                distance_tensor=online_dist)
+                else:
+                    raise ValueError("Invalid priority type")
 
 
-        # TODO: I don't why an unsqueeze is needed
-        mico_distance = mico_distance.unsqueeze(-1)
+            # TODO: I don't why an unsqueeze is needed
+            mico_distance = mico_distance.unsqueeze(-1)
 
-        if tensordict.device is not None:
-            mico_distance = mico_distance.to(tensordict.device)
+            if tensordict.device is not None:
+                mico_distance = mico_distance.to(tensordict.device)
 
-        tensordict.set(
-            "mico_distance",
-            mico_distance,
-            inplace=True,
-        )
+            tensordict.set(
+                "mico_distance",
+                mico_distance,
+                inplace=True,
+            )
 
         return mico_loss
     
@@ -167,12 +168,12 @@ class MICODQNLoss(DQNLoss):
 
             # NOTE: IMPORTANT: Check if makes sense to compare online vs target, or only online
             # or only target
-            if self.priority_type == "current_vs_next":
+            if self.priority_type == "BPERcn":
                 mico_distance = utils_metric.current_vs_next_mico_priorities(
                     current_state_representations = representations, # online representation of current states
                     next_state_representations = target_next_r, # target representation of next states
                     mico_beta = self.mico_beta)
-            elif self.priority_type == "all_vs_all":
+            elif self.priority_type == "BPERaa":
                 # It doesn't require new computations, only reshape and mean
                 # Notice (as we are not collecting trajectories of two anymore)
                 # We already calculate the distance, which is the online distance
@@ -216,8 +217,11 @@ class MICODQNNetwork(torch.nn.Module):
                  strides, 
                  num_cells_mlp,
                  activation_class,
-                 use_batch_norm=False):
+                 use_batch_norm=False,
+                 enable_mico=False):
         super(MICODQNNetwork, self).__init__()
+
+        self.enable_mico = enable_mico
 
         self.activation_class = activation_class()
         self.use_batch_norm = use_batch_norm
@@ -312,7 +316,11 @@ class MICODQNNetwork(torch.nn.Module):
             for fc_layer in self.fc_layers:
                 x = self.activation_class(fc_layer(x))
         q_values = self.output_layer(x)
-        return q_values, representation
+
+        if self.enable_mico:
+            return q_values, representation
+        else:
+            return q_values
     
 class MovingAverageNormalization:
     def __init__(self, momentum=0.01, epsilon=1e-4):

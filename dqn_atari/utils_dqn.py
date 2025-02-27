@@ -118,7 +118,7 @@ def update_tensor_dict_next_next_rewards(tensordict):
 def make_dqn_modules_pixels(proof_environment, policy_cfg, enable_mico = False):
 
     # Define input shape
-    input_shape = proof_environment.observation_spec["pixels"].shape
+    input_shape = proof_environment.observation_spec["observation"].shape
     env_specs = proof_environment.specs
 
     # NOTE: I think I can change the next two lines by
@@ -126,8 +126,6 @@ def make_dqn_modules_pixels(proof_environment, policy_cfg, enable_mico = False):
     # action_spec = proof_environment.action_spec.space
     num_actions = env_specs["input_spec", "full_action_spec", "action"].space.n
     action_spec = env_specs["input_spec", "full_action_spec", "action"]
-
-    print(f"Using {policy_cfg.type} for q-net architecture")
     
     # Define Q-Value Module
     activation_class = getattr(torch.nn, policy_cfg.activation)
@@ -146,11 +144,11 @@ def make_dqn_modules_pixels(proof_environment, policy_cfg, enable_mico = False):
 
     if enable_mico:
         q_net = TensorDictModule(q_net,
-            in_keys=["pixels"], 
+            in_keys=["observation"], 
             out_keys=["action_value", "representation"])
     else:
         q_net = TensorDictModule(q_net,
-            in_keys=["pixels"], 
+            in_keys=["observation"], 
             out_keys=["action_value"])
 
     # NOTE: Do I need CompositeSpec here?
@@ -158,13 +156,13 @@ def make_dqn_modules_pixels(proof_environment, policy_cfg, enable_mico = False):
     qvalue_module = QValueActor(
         module=q_net,
         spec=CompositeSpec(action=action_spec), 
-        in_keys=["pixels"],
+        in_keys=["observation"],
     )
     return qvalue_module
 
 
-def make_dqn_model(env_name, policy_cfg, frame_skip, cropping = False, enable_mico = False):
-    proof_environment = make_env(env_name, frame_skip = frame_skip, device="cpu", cropping = cropping)
+def make_dqn_model(env_name, policy_cfg, frame_stack, enable_mico = False):
+    proof_environment = make_env(env_name, frame_stack = frame_stack, device="cpu")
     qvalue_module = make_dqn_modules_pixels(proof_environment, policy_cfg, enable_mico = enable_mico)
     del proof_environment
     return qvalue_module
