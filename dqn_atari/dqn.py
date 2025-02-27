@@ -102,12 +102,31 @@ def main(cfg: "DictConfig"):
     run_name = f"{cfg.run_name}_{date_str}"
 
     # Initialize W&B run with config
+    hyperparameters = {
+        "priority_type" : cfg.buffer.prioritized_replay.priority_type,
+        "priority_weight" : cfg.buffer.prioritized_replay.priority_weight,
+        "moving_average" : cfg.buffer.prioritized_replay.moving_average,
+        "alpha" : cfg.buffer.prioritized_replay.alpha,
+        "beta" : cfg.buffer.prioritized_replay.beta,
+        "epsilon_decay_period" : cfg.collector.epsilon_decay_period,
+        "epsilon_end" : cfg.collector.epsilon_end,
+        "frames_per_batch" : cfg.collector.frames_per_batch,
+        "warmup_steps" : cfg.collector.warmup_steps,
+        "buffer_size" : cfg.buffer.buffer_size,
+        "batch_size" : cfg.buffer.batch_size,
+        "target_update_period" : cfg.loss.target_update_period,
+        "gamma" : cfg.loss.gamma,
+        "mico_beta" : cfg.loss.mico_loss.mico_beta,
+        "mico_gamma" : cfg.loss.mico_loss.mico_gamma,
+        "hydra_cfg" : dict(cfg)
+    }
+
     wandb.init(
         name=run_name,
         project=cfg.project_name, 
         group=cfg.group_name, 
         mode=cfg.logger.mode, 
-        config=dict(cfg)  # Pass the entire config for hyperparameter tracking
+        config=hyperparameters  # Pass the entire config for hyperparameter tracking
     )
 
     device = cfg.device
