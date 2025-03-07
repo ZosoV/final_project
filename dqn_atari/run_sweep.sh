@@ -1,10 +1,17 @@
 #!/bin/bash
 
-# bash run_sweep_MICO.sh
+seeds=(118398) # 919409 711872 442081 189061 117840)
 
-# bash run_sweep_cartpolev0.sh
+# Loop over each seed
+for seed in "${seeds[@]}"; do
 
-bash run_sweep_mountain_car_v0.sh
+    python dqn.py -m \
+        env.seed=$seed \
+        run_name=DQN_atari_$seed
+    
+    python dqn.py -m \
+        env.seed=$seed \
+        loss.mico_loss.enable=True \
+        run_name=DQN_MICO_atari_$seed
 
-bash run_sweep_cartpolev1.sh
-
+done

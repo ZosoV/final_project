@@ -16,6 +16,8 @@ dqn/outputs/
 .hydra/
 wandb/
 .vscode/
+dopamine_sandbox/logs/
+dopamine_sandbox/dopamine_logs/
 
 # Distribution / packaging
 .Python

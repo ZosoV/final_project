@@ -103,6 +103,7 @@ def main(cfg: "DictConfig"):
 
     # Initialize W&B run with config
     hyperparameters = {
+        "game" : cfg.env.env_name,
         "priority_type" : cfg.buffer.prioritized_replay.priority_type,
         "priority_weight" : cfg.buffer.prioritized_replay.priority_weight,
         "moving_average" : cfg.buffer.prioritized_replay.moving_average,
@@ -198,7 +199,7 @@ def main(cfg: "DictConfig"):
 
     replay_buffer = TensorDictReplayBuffer(
         pin_memory=False,
-        prefetch=10,
+        prefetch=16,
         storage=LazyMemmapStorage( # NOTE: additional line
             max_size=cfg.buffer.buffer_size,
             scratch_dir=scratch_dir,
@@ -332,6 +333,19 @@ def main(cfg: "DictConfig"):
 
             replay_buffer.extend(data)
 
+            # Update the statistics
+            episode_rewards = data["next", "episode_reward"][data["next", "done"]]
+            # When there are at least one done trajectory in the data batch
+            if len(episode_rewards) > 0:
+                sum_return += episode_rewards.sum().item()
+                number_of_episodes += len(episode_rewards)
+
+                sum_score += data["next", "episode_score"][data["next", "done"]].sum().item()
+                
+                # Get episode num_steps
+                episode_num_steps = data["next", "step_count"][data["next", "done"]]
+                num_steps += episode_num_steps.sum().detach().item()
+
             # Warmup phase (due to the continue statement)
             # Additionally This help us to keep a track of the steps_so_far
             # after the warmup_steps
@@ -376,17 +390,7 @@ def main(cfg: "DictConfig"):
             # collector and the trained policy live on different devices.
             collector.update_policy_weights_()
         
-            episode_rewards = data["next", "episode_reward"][data["next", "done"]]
-            # When there are at least one done trajectory in the data batch
-            if len(episode_rewards) > 0:
-                sum_return += episode_rewards.sum().item()
-                number_of_episodes += len(episode_rewards)
 
-                sum_score += data["next", "episode_score"][data["next", "done"]].sum().item()
-                
-                # Get episode num_steps
-                episode_num_steps = data["next", "step_count"][data["next", "done"]]
-                num_steps += episode_num_steps.sum().detach().item()
 
         training_time = time.time() - training_start
         average_steps_per_second =  num_steps / training_time
@@ -451,6 +455,7 @@ def main(cfg: "DictConfig"):
             # Flush the information to wandb
             # NOTE: We must flush the information by multiplying the step by 4 because
             # the skip frame is 4 in the environment. Then the collected frames are 4 times
+            print("Average Score: ", sum_score / number_of_episodes)
             wandb.log(info2flush, step=steps_so_far * 4)
 
     collector.shutdown()
