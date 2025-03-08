@@ -19,6 +19,8 @@ wandb/
 dopamine_sandbox/logs/
 dopamine_sandbox/dopamine_logs/
 torch-rl-gpu.sif
+dqn_atari/slurm-*
+dqn_atari/torch-rl-gpu.sif
 
 # Distribution / packaging
 .Python
