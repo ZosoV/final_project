@@ -8,8 +8,14 @@
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
 
-# Set W&B API key
-export WANDB_API_KEY=<your_wandb_api_key>
+# Check if an argument is provided
+if [ -z "$1" ]; then
+    echo "Error: No W&B API key provided."
+    exit 1
+fi
+
+# Set W&B API key from argument
+export WANDB_API_KEY=$1
 
 set -e
 module purge; module load bluebear
