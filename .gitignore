@@ -18,6 +18,7 @@ wandb/
 .vscode/
 dopamine_sandbox/logs/
 dopamine_sandbox/dopamine_logs/
+torch-rl-gpu.sif
 
 # Distribution / packaging
 .Python
