@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=bisimulation-rl-DQN
+#SBATCH --job-name=bisimulation-rl-DQN_MICO_BPERcn
 #SBATCH --ntasks=1
 #SBATCH --time=6-00:00:00
 #SBATCH --mail-type=ALL

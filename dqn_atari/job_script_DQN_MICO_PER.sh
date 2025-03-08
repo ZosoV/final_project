@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=bisimulation-rl-DQN_MICO
+#SBATCH --job-name=bisimulation-rl-DQN_MICO_PER
 #SBATCH --ntasks=1
 #SBATCH --time=6-00:00:00
 #SBATCH --mail-type=ALL
@@ -29,7 +29,9 @@ for seed in "${seeds[@]}"; do
     apptainer exec torch-rl-gpu.sif python dqn.py -m \
         env.seed=$seed \
         loss.mico_loss.enable=True \
-        run_name=DQN_MICO_atari_$seed \
+        buffer.prioritized_replay.enable=True \
+        buffer.prioritized_replay.priority_type=PER \
+        run_name=DQN_MICO_PER_atari_$seed \
         collector.num_iterations=40
     echo "Completed task with seed $seed at $(date)"
 done
