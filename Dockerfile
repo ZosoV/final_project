@@ -1,10 +1,9 @@
 # Use NVIDIA PyTorch base image with CUDA support
-# FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
 FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
 
 # Set up environment variables
 # ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHON_VERSION=3.8.2
+# ENV PYTHON_VERSION=3.8.2
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -15,7 +14,7 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a symlink for Python3.8
+# Create a symlink for Python
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
 # Install the specified Python version
