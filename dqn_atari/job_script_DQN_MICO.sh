@@ -24,6 +24,6 @@ for seed in "${seeds[@]}"; do
         env.seed=$seed \
         loss.mico_loss.enable=True \
         run_name=DQN_MICO_atari_$seed \
-        collector.num_iterations=40 \
+        collector.num_iterations=40
     echo "Completed task with seed $seed at $(date)"
 done

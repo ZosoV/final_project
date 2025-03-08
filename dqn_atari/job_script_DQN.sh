@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --qos=bbgpu
 #SBATCH --account=giacobbm-bisimulation-rl
-#SBATCH --gres=gpu:a30:1
+#SBATCH --gres=gpu:a100:1
 
 # Set W&B API key
 export WANDB_API_KEY=<your_wandb_api_key>
@@ -23,6 +23,6 @@ for seed in "${seeds[@]}"; do
     apptainer exec torch-rl-gpu.sif python dqn.py -m \
         env.seed=$seed \
         run_name=DQN_atari_$seed \
-        collector.num_iterations=40 \
+        collector.num_iterations=40
     echo "Completed task with seed $seed at $(date)"
 done

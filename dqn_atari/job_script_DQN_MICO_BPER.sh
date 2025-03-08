@@ -25,6 +25,6 @@ for seed in "${seeds[@]}"; do
         loss.mico_loss.enable=True \
         buffer.prioritized_replay.enable=True \
         run_name=DQN_MICO_BPER_atari_$seed \
-        collector.num_iterations=40 \
+        collector.num_iterations=40
     echo "Completed task with seed $seed at $(date)"
 done
