@@ -50,13 +50,13 @@ env:
 # In atari benchmark, they use 200M frames but this includes the skiped frames
 # so it means that the agent only makes 50M actual decisions (steps)
 collector:
-  num_iterations: 3 # 200
-  training_steps: 5_000 # 250_000 # agent steps
+  num_iterations: 40 # 200
+  training_steps: 250_000 # 250_000 # agent steps
   frames_per_batch: 4 # update_period in Dopamine # agent steps
   epsilon_start: 1.0
   epsilon_end: 0.01
   epsilon_decay_period: 250_000 # TODO: decay has to init after warmup # agent steps
-  warmup_steps: 1_004 # 20_004 # min_replay_history in Dopamine # agent steps
+  warmup_steps: 20_004 # 20_004 # min_replay_history in Dopamine # agent steps
   frame_stack: 4
 
 # policy
