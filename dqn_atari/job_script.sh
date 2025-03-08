@@ -2,9 +2,12 @@
 #SBATCH --job-name=bisimulation-rl-DQN
 #SBATCH --ntasks=1
 #SBATCH --time=10:00
-#SBATCH --qos=bbshort
 #SBATCH --mail-type=ALL
 #SBATCH --cpus-per-task=4
+
+#SBATCH --qos=bbgpu
+#SBATCH --account=giacobbm-bisimulation-rl
+#SBATCH --gres=gpu:a30:1
 
 # Set W&B API key
 export WANDB_API_KEY=<your_wandb_api_key>
