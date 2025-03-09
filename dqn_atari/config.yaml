@@ -36,7 +36,7 @@ logger:
 # Environment
 # SEEDS: [118398, 676190, 786456, 171936, 887739, 919409, 711872, 442081, 189061, 117840]
 env:
-  env_name: Asteroids # Asteroids
+  env_name: Frostbite # Asteroids
   seed: 118398
 
 # collector
