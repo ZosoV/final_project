@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=bisimulation-rl-DQN_MICO_PER
+#SBATCH --job-name=bisimulation-rl-DQN_MICO_PER-Frostbite
 #SBATCH --ntasks=1
 #SBATCH --time=10-00:00:00
 #SBATCH --mail-type=ALL
