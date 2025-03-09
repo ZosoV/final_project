@@ -3,7 +3,7 @@
 #SBATCH --ntasks=1
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-type=ALL
-#SBATCH --cpus-per-task=14
+#SBATCH --cpus-per-task=18
 #SBATCH --qos=bbgpu
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
@@ -21,6 +21,8 @@ fi
 
 # Set W&B API key from argument
 export WANDB_API_KEY=$1
+export WANDB_DIR=${BB_WORKDIR}/wandb
+mkdir -p $WANDB_DIR
 export TORCH_USE_CUDA_DSA=1  # PyTorch memory handling fix
 
 set -e
