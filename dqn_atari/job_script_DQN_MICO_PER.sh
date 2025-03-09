@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=bisimulation-rl-DQN_MICO_PER-Frostbite
+#SBATCH --job-name=bisimulation-rl-DQN_MICO_PER-Asteroids
 #SBATCH --ntasks=1
 #SBATCH --time=10-00:00:00
 #SBATCH --mail-type=ALL
-#SBATCH --cpus-per-task=18
+#SBATCH --cpus-per-task=14
 #SBATCH --qos=bbgpu
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
