@@ -43,5 +43,6 @@ for seed in "${seeds[@]}"; do
 done
 
 # Cleanup
+sleep 300  # 5-minute buffer
 # test -d ${BB_WORKDIR} && /bin/cp -r ${BB_WORKDIR} .
 test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}
