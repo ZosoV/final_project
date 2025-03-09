@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN_MICO-Asteroids
 #SBATCH --ntasks=1
-#SBATCH --time=10-00:00:00
+#SBATCH --time=6-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --cpus-per-task=14
 #SBATCH --qos=bbgpu
