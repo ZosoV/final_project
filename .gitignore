@@ -22,6 +22,7 @@ torch-rl-gpu.sif
 dqn_atari/slurm-*
 dqn_atari/torch-rl-gpu.sif
 dqn_atari/job_script_ignore.sh
+dopamine_sandbox/baselines/
 
 # Distribution / packaging
 .Python
