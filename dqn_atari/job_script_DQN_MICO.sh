@@ -41,5 +41,5 @@ for seed in "${seeds[@]}"; do
 done
 
 # Cleanup
-test -d ${BB_WORKDIR} && /bin/cp -r ${BB_WORKDIR} .
+# test -d ${BB_WORKDIR} && /bin/cp -r ${BB_WORKDIR} .
 test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}
