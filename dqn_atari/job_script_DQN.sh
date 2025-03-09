@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN-Asteroids
 #SBATCH --ntasks=1
-#SBATCH --time=6-00:00:00
+#SBATCH --time=7-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --cpus-per-task=14
 #SBATCH --qos=bbgpu
@@ -27,7 +27,7 @@ set -e
 module purge; module load bluebear
 
 
-seeds=(118398 919409 711872) # 442081 189061)
+seeds=(118398 919409) # 711872) # 442081 189061)
 
 # Loop over each seed and execute tasks sequentially
 for seed in "${seeds[@]}"; do
