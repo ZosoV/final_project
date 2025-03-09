@@ -198,11 +198,12 @@ def main(cfg: "DictConfig"):
         scratch_dir = cfg.buffer.scratch_dir
 
     replay_buffer = TensorDictReplayBuffer(
-        pin_memory=False,
-        prefetch=16,
+        pin_memory=True,
+        prefetch=12,
         storage=LazyMemmapStorage( # NOTE: additional line
             max_size=cfg.buffer.buffer_size,
-            scratch_dir=scratch_dir,
+            # scratch_dir=scratch_dir,
+            scratch_dir=os.environ["TMPDIR"]
         ),
         batch_size=cfg.buffer.batch_size,
         sampler = sampler
