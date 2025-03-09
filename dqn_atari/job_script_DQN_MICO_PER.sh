@@ -3,7 +3,7 @@
 #SBATCH --ntasks=1
 #SBATCH --time=3-00:00:00
 #SBATCH --mail-type=ALL
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=12
 #SBATCH --qos=bbgpu
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
