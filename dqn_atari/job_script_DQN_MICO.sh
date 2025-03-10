@@ -24,7 +24,7 @@ export WANDB_API_KEY=$1
 export WANDB_DIR=${BB_WORKDIR}/wandb
 mkdir -p $WANDB_DIR
 
-set -e
+# set -e # Enable 'exit on error'
 module purge; module load bluebear
 
 
@@ -39,9 +39,15 @@ for seed in "${seeds[@]}"; do
         run_name=DQN_MICO_atari_$seed \
         collector.num_iterations=201
     echo "Completed task with seed $seed at $(date)"
+
+    # Cleanup
+    sleep 300  # 5-minute buffer
+    test -d ${BB_WORKDIR}/wandb/ && /bin/cp -r ${BB_WORKDIR}/wandb/ ./outputs/wandb/
+    test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}
+
 done
 
-# Cleanup
-sleep 300  # 5-minute buffer
-# test -d ${BB_WORKDIR} && /bin/cp -r ${BB_WORKDIR} .
-test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}
+# # Cleanup
+# sleep 300  # 5-minute buffer
+# test -d ${BB_WORKDIR} && /bin/cp -r ${BB_WORKDIR} ./outputs/wandb/
+# test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}
