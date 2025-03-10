@@ -2,12 +2,9 @@
 #SBATCH --job-name=bisimulation-rl-DQN-Asteroids
 #SBATCH --ntasks=1
 #SBATCH --time=7-00:00:00
+#SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
 #SBATCH --cpus-per-task=14
-#SBATCH --qos=bbgpu
-#SBATCH --account=giacobbm-bisimulation-rl
-#SBATCH --gres=gpu:a100:1
-#SBATCH --constraint=icelake
 
 
 # Check if an argument is provided
@@ -42,6 +39,12 @@ source ${VENV_PATH}/bin/activate
 
 # Store pip cache in /scratch directory, instead of the default home directory location
 PIP_CACHE_DIR="/scratch/${USER}/pip"
+
+# Installing required modules for atari
+# dnf -y update && dnf -y install \
+#     mesa-libGL \
+#     glib2 \
+#     && dnf clean all
 
 # Perform any required pip installations. For reasons of consistency we would recommend
 # that you define the version of the Python module – this will also ensure that if the
