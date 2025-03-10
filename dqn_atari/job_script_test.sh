@@ -23,3 +23,4 @@ module purge; module load bluebear
 
 apptainer exec --nv torch-rl-gpu.sif python dqn.py
 
+sleep 300  # 5-minute buffer

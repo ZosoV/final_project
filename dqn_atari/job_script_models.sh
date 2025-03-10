@@ -1,0 +1,53 @@
+#!/bin/bash
+#SBATCH --job-name=bisimulation-rl-DQN
+#SBATCH --ntasks=1
+#SBATCH --time=10:0
+#SBATCH --qos=bbshort
+#SBATCH --mail-type=ALL
+#SBATCH --cpus-per-task=4
+
+
+set -e
+
+module purge; module load bluebear
+module load bear-apps/2021b
+module load Python/3.9.6-GCCcore-11.2.0
+
+export VENV_DIR="${HOME}/virtual-environments"
+export VENV_PATH="${VENV_DIR}/my-virtual-env-${BB_CPU}"
+
+# Create a master venv directory if necessary
+mkdir -p ${VENV_DIR}
+
+# Check if virtual environment exists and create it if not
+if [[ ! -d ${VENV_PATH} ]]; then
+    python3 -m venv --system-site-packages ${VENV_PATH}
+fi
+
+# Activate the virtual environment
+source ${VENV_PATH}/bin/activate
+
+
+# Store pip cache in /scratch directory, instead of the default home directory location
+PIP_CACHE_DIR="/scratch/${USER}/pip"
+
+# Installing required modules for atari
+# dnf -y update && dnf -y install \
+#     mesa-libGL \
+#     glib2 \
+#     && dnf clean all
+
+# Perform any required pip installations. For reasons of consistency we would recommend
+# that you define the version of the Python module – this will also ensure that if the
+# module is already installed in the virtual environment it won't be modified.
+pip install torchrl==0.4.0 
+pip install tensordict==0.4.0
+pip install torch==2.3.1 torchvision==0.18.1
+pip install wandb hydra-core tqdm
+pip install gymnasium==0.29.1 gymnasium[classic-control]
+pip install ale-py gymnasium[other]
+
+# Execute your Python scripts
+python dqn.py
+
+sleep 300  # 5-minute buffer
