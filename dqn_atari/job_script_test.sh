@@ -6,12 +6,39 @@
 #SBATCH --mail-type=ALL
 #SBATCH --cpus-per-task=4
 
-# Set W&B API key
-export WANDB_API_KEY=<your_wandb_api_key>
+# Temporary scratch space for I/O efficiency
+BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
+export TMPDIR=${BB_WORKDIR}
 
-set -e
+# Check if an argument is provided
+if [ -z "$1" ]; then
+    echo "Error: No W&B API key provided."
+    exit 1
+fi
+
+# Set W&B API key from argument and dir
+export WANDB_API_KEY=$1
+export WANDB_DIR=${BB_WORKDIR}/wandb
+mkdir -p $WANDB_DIR
+
+# set -e # Enable 'exit on error'
 module purge; module load bluebear
 
-apptainer exec torch-rl-gpu.sif python dqn.py -m \
-        env.seed=1110 \
-        run_name=DQN_atari_1110
+
+seeds=(118398 919409) # 711872) # 442081 189061)
+
+# Loop over each seed and execute tasks sequentially
+for seed in "${seeds[@]}"; do
+    echo "Starting task with seed $seed at $(date)"
+    apptainer exec --nv torch-rl-gpu.sif python dqn.py -m \
+        env.seed=$seed \
+        run_name=DQN_atari_$seed \
+        collector.num_iterations=201
+    echo "Completed task with seed $seed at $(date)"
+
+    # Cleanup
+    sleep 300  # 5-minute buffer
+    test -d ${BB_WORKDIR}/wandb/ && /bin/cp -r ${BB_WORKDIR}/wandb/ ./outputs/wandb/
+    test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}
+
+done
