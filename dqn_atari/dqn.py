@@ -205,7 +205,7 @@ def main(cfg: "DictConfig"):
         prefetch=16,
         storage=LazyMemmapStorage( # NOTE: additional line
             max_size=cfg.buffer.buffer_size,
-            scratch_dir=scratch_dir,
+            # scratch_dir=scratch_dir,
             scratch_dir=os.path.join(os.environ["TMPDIR"], f"rb_{run_name}"),
         ),
         batch_size=cfg.buffer.batch_size,
