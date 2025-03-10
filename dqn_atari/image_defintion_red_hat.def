@@ -2,6 +2,8 @@ Bootstrap: docker
 From: registry.access.redhat.com/ubi8/ubi:8.10
 
 %post
+    mkdir -p /rds && chmod 777 /rds
+    
     # Enable the EPEL repository for additional packages
     yum install -y epel-release
 
