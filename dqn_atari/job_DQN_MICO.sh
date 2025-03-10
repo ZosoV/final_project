@@ -1,10 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=bisimulation-rl-DQN-Asteroids
+#SBATCH --job-name=bisimulation-rl-DQN-${GAME_NAME:-Asteroids}
 #SBATCH --ntasks=1
 #SBATCH --time=7-00:00:00
-#SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
-#SBATCH --cpus-per-task=14
+#SBATCH --cpus-per-task=18
+#SBATCH --qos=bbgpu
+#SBATCH --account=giacobbm-bisimulation-rl
+#SBATCH --gres=gpu:a100:1
+#SBATCH --constraint=icelake
+#SBATCH --output="outputs/slurm-files/slurm-%A_%a.out"
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -41,29 +45,26 @@ fi
 # Activate the virtual environment
 source ${VENV_PATH}/bin/activate
 
-
 # Store pip cache in /scratch directory, instead of the default home directory location
 PIP_CACHE_DIR="/scratch/${USER}/pip"
 
-# Installing required modules for atari
-# dnf -y update && dnf -y install \
-#     mesa-libGL \
-#     glib2 \
-#     && dnf clean all
 
-# Perform any required pip installations. For reasons of consistency we would recommend
-# that you define the version of the Python module – this will also ensure that if the
-# module is already installed in the virtual environment it won't be modified.
-# pip install torchrl==0.4.0 
-# pip install tensordict==0.4.0
-# pip install torch==2.3.1 torchvision==0.18.1
-# pip install wandb hydra-core tqdm
-# pip install gymnasium==0.29.1 gymnasium[classic-control]
-# pip install ale-py gymnasium[other]
+seeds=(118398 919409) # 711872) # 442081 189061)
 
-# Execute your Python scripts
-python dqn.py
+# Loop over each seed and execute tasks sequentially
+for seed in "${seeds[@]}"; do
+    echo "Starting task with seed $seed at $(date)"
+    
+    python dqn.py -m \
+        env.seed=$seed \
+        env.env_name=${GAME_NAME:-Asteroids} \
+        loss.mico_loss.enable=True \
+        run_name=DQN_MICO_${GAME_NAME:-Asteroids}_$seed 
+    echo "Completed task with seed $seed at $(date)"
 
+done
+
+# Cleanup
 sleep 300  # 5-minute buffer
 test -d ${BB_WORKDIR}/wandb/ && /bin/cp -r ${BB_WORKDIR}/wandb/ ./outputs/wandb/
 test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}

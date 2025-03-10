@@ -201,7 +201,7 @@ def main(cfg: "DictConfig"):
     os.makedirs(os.path.join(os.environ["TMPDIR"], f"rb_{run_name}"), exist_ok=True)
 
     replay_buffer = TensorDictReplayBuffer(
-        pin_memory=False,
+        pin_memory=True,
         prefetch=16,
         storage=LazyMemmapStorage( # NOTE: additional line
             max_size=cfg.buffer.buffer_size,
