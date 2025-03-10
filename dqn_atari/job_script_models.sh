@@ -7,6 +7,15 @@
 #SBATCH --cpus-per-task=4
 
 
+# Check if an argument is provided
+if [ -z "$1" ]; then
+    echo "Error: No W&B API key provided."
+    exit 1
+fi
+
+# Set W&B API key from argument and dir
+export WANDB_API_KEY=$1
+
 set -e
 
 module purge; module load bluebear
