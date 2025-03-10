@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN
 #SBATCH --ntasks=1
-#SBATCH --time=10:0
-#SBATCH --qos=bbshort
+#SBATCH --time=1-00:00:00
+#SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
 #SBATCH --cpus-per-task=4
 
