@@ -23,7 +23,6 @@ fi
 export WANDB_API_KEY=$1
 export WANDB_DIR=${BB_WORKDIR}/wandb
 mkdir -p $WANDB_DIR
-export TORCH_USE_CUDA_DSA=1  # PyTorch memory handling fix
 
 set -e
 module purge; module load bluebear
