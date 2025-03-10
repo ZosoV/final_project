@@ -28,11 +28,18 @@ RUN cd baselines && pip install -e .
 RUN apt-get update && apt-get install -y libgl1-mesa-glx libglib2.0-0
 RUN pip install ale-py
 
+# Install Jupyter and other dependencies
+RUN pip install notebook
+
+# Expose Jupyter's default port
+EXPOSE 8888
+
 # Set working directory
 WORKDIR /workspace
 
 # Default command
-CMD ["/bin/bash"]
-
+# CMD ["/bin/bash"]
+# Run Jupyter Notebook when the container starts
+CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]
 
 # docker run --rm -it --gpus all -v "$(pwd)":/workspace dopamine-gpu

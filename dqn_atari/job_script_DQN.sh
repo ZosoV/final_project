@@ -2,7 +2,8 @@
 #SBATCH --job-name=bisimulation-rl-DQN-Asteroids
 #SBATCH --ntasks=1
 #SBATCH --time=7-00:00:00
-#SBATCH --cpus-per-task=18
+#SBATCH --mail-type=ALL
+#SBATCH --cpus-per-task=14
 #SBATCH --qos=bbgpu
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
