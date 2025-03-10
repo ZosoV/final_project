@@ -6,6 +6,9 @@
 #SBATCH --mail-type=ALL
 #SBATCH --cpus-per-task=14
 
+# Temporary scratch space for I/O efficiency
+BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
+export TMPDIR=${BB_WORKDIR}
 
 # Check if an argument is provided
 if [ -z "$1" ]; then
@@ -49,14 +52,16 @@ PIP_CACHE_DIR="/scratch/${USER}/pip"
 # Perform any required pip installations. For reasons of consistency we would recommend
 # that you define the version of the Python module – this will also ensure that if the
 # module is already installed in the virtual environment it won't be modified.
-pip install torchrl==0.4.0 
-pip install tensordict==0.4.0
-pip install torch==2.3.1 torchvision==0.18.1
-pip install wandb hydra-core tqdm
-pip install gymnasium==0.29.1 gymnasium[classic-control]
-pip install ale-py gymnasium[other]
+# pip install torchrl==0.4.0 
+# pip install tensordict==0.4.0
+# pip install torch==2.3.1 torchvision==0.18.1
+# pip install wandb hydra-core tqdm
+# pip install gymnasium==0.29.1 gymnasium[classic-control]
+# pip install ale-py gymnasium[other]
 
 # Execute your Python scripts
 python dqn.py
 
 sleep 300  # 5-minute buffer
+# test -d ${BB_WORKDIR}/wandb/ && /bin/cp -r ${BB_WORKDIR}/wandb/ ./outputs/wandb/
+test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}
