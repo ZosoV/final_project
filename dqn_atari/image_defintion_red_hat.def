@@ -1,0 +1,45 @@
+Bootstrap: docker
+From: registry.access.redhat.com/ubi8/ubi:8.10
+
+%post
+    # Enable the EPEL repository for additional packages
+    yum install -y epel-release
+
+    # Install development tools and libraries
+    yum groupinstall -y "Development Tools"
+    yum install -y \
+        python3 \
+        python3-pip \
+        python3-devel \
+        git \
+        libglvnd-devel \
+        libglvnd-glx \
+        libglvnd-opengl \
+        libffi-devel \
+        cmake \
+        wget
+
+    # Upgrade pip
+    python3 -m pip install --upgrade pip
+
+    # Install PyTorch and related packages
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+    # Install additional Python packages
+    pip install torchrl==0.4.0 
+    pip install tensordict==0.4.0
+    pip install torch==2.3.1 torchvision==0.18.1 --index-url https://download.pytorch.org/whl/cu118
+    pip install wandb hydra-core tqdm
+    pip install gymnasium==0.29.1 gymnasium[classic-control]
+    pip install ale-py gymnasium[other]
+
+%environment
+    export LC_ALL=C
+    export PATH=/usr/local/bin:$PATH
+
+%runscript
+    exec /bin/bash "$@"
+
+%help
+    This container is built on Red Hat Universal Base Image 8.10.
+    It includes Python, PyTorch with CUDA support, and other necessary dependencies for your application.
