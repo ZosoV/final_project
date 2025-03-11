@@ -48,6 +48,15 @@ source ${VENV_PATH}/bin/activate
 # Store pip cache in /scratch directory, instead of the default home directory location
 PIP_CACHE_DIR="/scratch/${USER}/pip"
 
+# Perform any required pip installations. For reasons of consistency we would recommend
+# that you define the version of the Python module – this will also ensure that if the
+# module is already installed in the virtual environment it won't be modified.
+pip install torchrl==0.4.0 
+pip install tensordict==0.4.0
+pip install torch==2.3.1 torchvision==0.18.1
+pip install wandb hydra-core tqdm
+pip install gymnasium==0.29.1 gymnasium[classic-control]
+pip install ale-py gymnasium[other]
 
 seeds=(118398 919409) # 711872) # 442081 189061)
 
