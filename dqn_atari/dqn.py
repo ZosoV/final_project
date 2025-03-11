@@ -198,15 +198,17 @@ def main(cfg: "DictConfig"):
         scratch_dir = cfg.buffer.scratch_dir
 
     # Create a dir in TMPDIR/<run_name>/ to store the replay buffer
-    # os.makedirs(os.path.join(os.environ["TMPDIR"], f"rb_{run_name}"), exist_ok=True)
+    scratch_dir = os.path.join(os.environ["EXP_BUFF"], f"rb_{run_name}")
+    os.makedirs(scratch_dir, exist_ok=True)
+
+    print(f"Using scratch_dir: {scratch_dir}")
 
     replay_buffer = TensorDictReplayBuffer(
-        pin_memory=True,
-        prefetch=16,
+        pin_memory=False,
+        # prefetch=16,
         storage=LazyMemmapStorage( # NOTE: additional line
             max_size=cfg.buffer.buffer_size,
             scratch_dir=scratch_dir,
-            # scratch_dir=os.path.join(os.environ["TMPDIR"], f"rb_{run_name}"),
         ),
         batch_size=cfg.buffer.batch_size,
         sampler = sampler

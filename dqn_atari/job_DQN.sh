@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN-${GAME_NAME:-Asteroids}
-#SBATCH --array=0-1
+#SBATCH --array=0
 #SBATCH --ntasks=1
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-type=ALL
@@ -11,9 +11,10 @@
 #SBATCH --output="outputs/slurm-files/slurm-%A_%a.out"
 
 # Temporary scratch space for I/O efficiency
-# BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
-BB_WORKDIR=$(mktemp -d /rds/projects/g/giacobbm-bisimulation-rl/${USER}_${SLURM_JOBID}.XXXXXX)
-export TMPDIR=${BB_WORKDIR}
+BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
+# BB_WORKDIR=$(mktemp -d /rds/projects/g/giacobbm-bisimulation-rl/${USER}_${SLURM_JOBID}.XXXXXX)
+# export TMPDIR=${BB_WORKDIR}
+export EXP_BUFF=${BB_WORKDIR}
 
 # Check if an argument is provided
 if [ -z "$1" ]; then
