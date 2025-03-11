@@ -1,20 +1,21 @@
 #!/bin/bash
-#SBATCH --job-name=bisimulation-rl-DQN-${GAME_NAME:-Asteroids}
+#SBATCH --job-name=bisimulation-rl-DQN-Frostbite
 #SBATCH --array=0
 #SBATCH --ntasks=1
-#SBATCH --time=7-00:00:00
+#SBATCH --time=9-00:00:00
+#SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
-#SBATCH --cpus-per-task=18
-#SBATCH --qos=bbgpu
-#SBATCH --account=giacobbm-bisimulation-rl
-#SBATCH --gres=gpu:a100:1
-#SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
+#SBATCH --cpus-per-task=60
+#SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
+#SBATCH --constraint=sapphire,emerald
 
 # Temporary scratch space for I/O efficiency
-BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
+# BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
 # BB_WORKDIR=$(mktemp -d /rds/projects/g/giacobbm-bisimulation-rl/${USER}_${SLURM_JOBID}.XXXXXX)
-export TMPDIR=${BB_WORKDIR}
+# export TMPDIR=${BB_WORKDIR}
 # export EXP_BUFF=${BB_WORKDIR}
+
+GAME_NAME=Frostbite
 
 # Check if an argument is provided
 if [ -z "$1" ]; then
@@ -34,8 +35,10 @@ module purge; module load bluebear
 module load bear-apps/2021b
 module load Python/3.9.6-GCCcore-11.2.0
 
-export VENV_DIR="${HOME}/virtual-environments"
-export VENV_PATH="${VENV_DIR}/my-virtual-env-${BB_CPU}"
+PROJECT_DIR="/rds/projects/g/giacobbm-bisimulation-rl"
+
+export VENV_DIR="${PROJECT_DIR}/virtual-environments"
+export VENV_PATH="${VENV_DIR}/cpu_virtual_env-${BB_CPU}"
 
 # Create a master venv directory if necessary
 mkdir -p ${VENV_DIR}
@@ -69,17 +72,12 @@ seeds=(118398 919409 711872 442081 189061)
 SEED=${seeds[$SLURM_ARRAY_TASK_ID]}
 
 echo "Starting task with seed $SEED at $(date)"
-python dqn.py -m \
-    env.env_name=${GAME_NAME:-Asteroids} \
+python dqn_cpu.py -m \
     env.seed=$SEED \
-    run_name=DQN_${GAME_NAME:-Asteroids}_$SEED
+    env.env_name=${GAME_NAME:-Asteroids} \
+    loss.mico_loss.enable=True \
+    run_name=DQN_MICO_${GAME_NAME:-Asteroids}_$SEED 
 echo "Completed task with seed $SEED at $(date)"
-
-
-# Cleanup
-sleep 300  # 5-minute buffer
-# test -d ${BB_WORKDIR}/wandb/ && /bin/cp -r ${BB_WORKDIR}/wandb/ ./outputs/wandb/
-test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}
 
 echo "Exiting."
 exit 0

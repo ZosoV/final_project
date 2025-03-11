@@ -4,11 +4,11 @@
 #SBATCH --ntasks=1
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-type=ALL
-#SBATCH --cpus-per-task=28
+#SBATCH --cpus-per-task=18
 #SBATCH --qos=bbgpu
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
-#SBATCH --output="outputs/slurm-files/slurm-%A_%a.out"
+#SBATCH --output="outputs/slurm-files/slurm-DQN-MICO-BPER-%A_%a.out"
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
