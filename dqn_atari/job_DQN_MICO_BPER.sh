@@ -74,7 +74,7 @@ python dqn.py -m \
     loss.mico_loss.enable=True \
     buffer.prioritized_replay.enable=True \
     buffer.prioritized_replay.priority_type=BPERcn \
-    run_name=DQN_MICO_${GAME_NAME:-Asteroids}_$SEED 
+    run_name=DQN_MICO_BPER_${GAME_NAME:-Asteroids}_$SEED 
 
 echo "Completed task with seed $SEED at $(date)"
 
