@@ -1,13 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN-${GAME_NAME:-Asteroids}
+#SBATCH --array=0-1
 #SBATCH --ntasks=1
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-type=ALL
-#SBATCH --cpus-per-task=18
+#SBATCH --cpus-per-task=28
 #SBATCH --qos=bbgpu
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
-#SBATCH --constraint=icelake
 #SBATCH --output="outputs/slurm-files/slurm-%A_%a.out"
 
 # Temporary scratch space for I/O efficiency
@@ -22,9 +22,10 @@ fi
 
 # Set W&B API key from argument and dir
 export WANDB_API_KEY=$1
-export WANDB_DIR=${BB_WORKDIR}/wandb
-mkdir -p $WANDB_DIR
+# export WANDB_DIR=${BB_WORKDIR}/wandb
+# mkdir -p $WANDB_DIR
 
+set -x  # Enable debug mode
 set -e
 
 module purge; module load bluebear
@@ -60,20 +61,24 @@ pip install gymnasium==0.29.1 gymnasium[classic-control]
 pip install ale-py gymnasium[other]
 
 
-seeds=(118398 919409) # 711872) # 442081 189061)
+seeds=(118398 919409 711872 442081 189061)
 
-# Loop over each seed and execute tasks sequentially
-for seed in "${seeds[@]}"; do
-    echo "Starting task with seed $seed at $(date)"
-    python dqn.py -m \
-        env.env_name=${GAME_NAME:-Asteroids} \
-        env.seed=$seed \
-        run_name=DQN_MICO_${GAME_NAME:-Asteroids}_$seed
-    echo "Completed task with seed $seed at $(date)"
+# Select the seed based on the SLURM array task ID
+SEED=${seeds[$SLURM_ARRAY_TASK_ID]}
 
-done
+echo "Starting task with seed $SEED at $(date)"
+python dqn.py -m \
+    env.env_name=${GAME_NAME:-Asteroids} \
+    env.seed=$SEED \
+    run_name=DQN_MICO_${GAME_NAME:-Asteroids}_$SEED
+echo "Completed task with seed $SEED at $(date)"
+
 
 # Cleanup
 sleep 300  # 5-minute buffer
-test -d ${BB_WORKDIR}/wandb/ && /bin/cp -r ${BB_WORKDIR}/wandb/ ./outputs/wandb/
+# test -d ${BB_WORKDIR}/wandb/ && /bin/cp -r ${BB_WORKDIR}/wandb/ ./outputs/wandb/
 test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}
+
+echo "Exiting."
+exit 0
+echo "Exited."
