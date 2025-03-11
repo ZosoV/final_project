@@ -8,10 +8,10 @@
 #SBATCH --output="outputs/slurm-files/slurm-%A_%a.out"
 
 # Temporary scratch space for I/O efficiency
-BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
+# BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
 # BB_WORKDIR=$(mktemp -d /rds/projects/g/giacobbm-bisimulation-rl/${USER}_${SLURM_JOBID}.XXXXXX)
 # export TMPDIR=${BB_WORKDIR}
-export EXP_BUFF=${BB_WORKDIR}
+# export EXP_BUFF=${BB_WORKDIR}
 
 # Check if an argument is provided
 if [ -z "$1" ]; then
@@ -74,9 +74,9 @@ echo "Completed task with seed $SEED at $(date)"
 
 
 # Cleanup
-sleep 300  # 5-minute buffer
-# test -d ${BB_WORKDIR}/wandb/ && /bin/cp -r ${BB_WORKDIR}/wandb/ ./outputs/wandb/
-test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}
+# sleep 300  # 5-minute buffer
+# # test -d ${BB_WORKDIR}/wandb/ && /bin/cp -r ${BB_WORKDIR}/wandb/ ./outputs/wandb/
+# test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}
 
 echo "Exiting."
 exit 0
