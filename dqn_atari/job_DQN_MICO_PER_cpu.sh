@@ -7,7 +7,7 @@
 #SBATCH --mail-type=ALL
 #SBATCH --cpus-per-task=60
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
-#SBATCH --constraint=sapphire,emerald
+#SBATCH --constraint=sapphire
 
 # Temporary scratch space for I/O efficiency
 # BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
