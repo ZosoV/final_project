@@ -31,7 +31,9 @@ module purge; module load bluebear
 module load bear-apps/2021b
 module load Python/3.9.6-GCCcore-11.2.0
 
-export VENV_DIR="${HOME}/virtual-environments"
+PROJECT_DIR="/rds/projects/g/giacobbm-bisimulation-rl"
+
+export VENV_DIR="${PROJECT_DIR}/virtual-environments"
 export VENV_PATH="${VENV_DIR}/cpu_virtual_env-${BB_CPU}"
 
 # Create a master venv directory if necessary
