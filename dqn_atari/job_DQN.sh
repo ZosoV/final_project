@@ -69,7 +69,7 @@ seeds=(118398 919409 711872 442081 189061)
 SEED=${seeds[$SLURM_ARRAY_TASK_ID]}
 
 echo "Starting task with seed $SEED at $(date)"
-python dqn2.py -m \
+python dqn.py -m \
     env.env_name=${GAME_NAME:-Asteroids} \
     env.seed=$SEED \
     run_name=DQN_${GAME_NAME:-Asteroids}_$SEED
