@@ -170,13 +170,13 @@ def main(cfg: "DictConfig"):
     collector = SyncDataCollector(
         create_env_fn=make_env(cfg.env.env_name,
                                 frame_stack = frame_stack,
-                                device = device, 
+                                device = "cpu", 
                                 seed = cfg.env.seed),
         policy=model_explore,
         frames_per_batch=frames_per_batch,
         exploration_type=ExplorationType.RANDOM,
-        device=device,
-        storing_device=device,
+        device="cpu",
+        storing_device="cpu",
         split_trajs=False,
         init_random_frames=warmup_steps,
     )

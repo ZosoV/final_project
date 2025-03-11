@@ -204,7 +204,7 @@ def main(cfg: "DictConfig"):
     print(f"Using scratch_dir: {scratch_dir}")
 
     replay_buffer = TensorDictReplayBuffer(
-        pin_memory=True,
+        pin_memory=False,
         prefetch=10,
         storage=LazyTensorStorage(
             max_size=cfg.buffer.buffer_size,
