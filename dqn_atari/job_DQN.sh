@@ -13,8 +13,8 @@
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
 # BB_WORKDIR=$(mktemp -d /rds/projects/g/giacobbm-bisimulation-rl/${USER}_${SLURM_JOBID}.XXXXXX)
-# export TMPDIR=${BB_WORKDIR}
-export EXP_BUFF=${BB_WORKDIR}
+export TMPDIR=${BB_WORKDIR}
+# export EXP_BUFF=${BB_WORKDIR}
 
 # Check if an argument is provided
 if [ -z "$1" ]; then
