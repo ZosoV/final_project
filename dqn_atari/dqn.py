@@ -175,8 +175,9 @@ def main(cfg: "DictConfig"):
         policy=model_explore,
         frames_per_batch=frames_per_batch,
         exploration_type=ExplorationType.RANDOM,
-        device="cpu",
+        env_device="cpu",
         storing_device="cpu",
+        policy_device=device,
         split_trajs=False,
         init_random_frames=warmup_steps,
     )
@@ -209,6 +210,7 @@ def main(cfg: "DictConfig"):
         storage=LazyMemmapStorage( # NOTE: additional line
             max_size=cfg.buffer.buffer_size,
             scratch_dir=scratch_dir,
+            device = "cpu"
         ),
         batch_size=cfg.buffer.batch_size,
         sampler = sampler
