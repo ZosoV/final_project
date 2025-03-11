@@ -32,7 +32,7 @@ module load bear-apps/2021b
 module load Python/3.9.6-GCCcore-11.2.0
 
 export VENV_DIR="${HOME}/virtual-environments"
-export VENV_PATH="${VENV_DIR}/my-virtual-env-${BB_CPU}"
+export VENV_PATH="${VENV_DIR}/cpu_virtual_env-${BB_CPU}"
 
 # Create a master venv directory if necessary
 mkdir -p ${VENV_DIR}
