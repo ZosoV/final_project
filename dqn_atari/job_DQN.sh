@@ -1,10 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN-${GAME_NAME:-Asteroids}
 #SBATCH --array=0
-#SBATCH --ntasks=1
+#SBATCH --ntasks=18
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-type=ALL
-#SBATCH --cpus-per-task=18
 #SBATCH --qos=bbgpu
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
