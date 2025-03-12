@@ -163,6 +163,27 @@ def main(cfg: "DictConfig"):
         greedy_module,
     ).to(device)
 
+    # Create the replay buffer
+    if enable_prioritized_replay:
+        print("Using Prioritized Replay Buffer")
+        sampler = PrioritizedSampler(
+            max_capacity=cfg.buffer.buffer_size, 
+            alpha=cfg.buffer.prioritized_replay.alpha, 
+            beta=cfg.buffer.prioritized_replay.beta)
+    else:
+        sampler = RandomSampler()
+
+    replay_buffer = TensorDictReplayBuffer(
+        pin_memory=False,
+        prefetch=16,
+        storage=LazyTensorStorage(
+            max_size=cfg.buffer.buffer_size,
+            device=device  # Important: Ensures data is stored directly in RAM
+        ),
+        batch_size=cfg.buffer.batch_size,
+        sampler = sampler,
+        shared = True
+    )
 
     # Create the collector
     # NOTE: warmup_steps: Number of frames 
@@ -193,41 +214,11 @@ def main(cfg: "DictConfig"):
         device=device,
         split_trajs=False,
         init_random_frames=warmup_steps,
-        cat_results="stack",     
+        cat_results="stack",
+        replay_buffer = replay_buffer,     
     )
 
-    # Create the replay buffer
-    if enable_prioritized_replay:
-        print("Using Prioritized Replay Buffer")
-        sampler = PrioritizedSampler(
-            max_capacity=cfg.buffer.buffer_size, 
-            alpha=cfg.buffer.prioritized_replay.alpha, 
-            beta=cfg.buffer.prioritized_replay.beta)
-    else:
-        sampler = RandomSampler()
 
-    if cfg.buffer.scratch_dir is None:
-        tempdir = tempfile.TemporaryDirectory()
-        scratch_dir = tempdir.name
-    else:
-        scratch_dir = cfg.buffer.scratch_dir
-
-    # Create a dir in TMPDIR/<run_name>/ to store the replay buffer
-    # scratch_dir = os.path.join(os.environ["EXP_BUFF"], f"rb_{run_name}")
-    # os.makedirs(scratch_dir, exist_ok=True)
-
-    print(f"Using scratch_dir: {scratch_dir}")
-
-    replay_buffer = TensorDictReplayBuffer(
-        pin_memory=False,
-        prefetch=10,
-        storage=LazyTensorStorage(
-            max_size=cfg.buffer.buffer_size,
-            device=device  # Important: Ensures data is stored directly in RAM
-        ),
-        batch_size=cfg.buffer.batch_size,
-        sampler = sampler
-    )
 
     # Create a moving average for the priorities
     if cfg.buffer.prioritized_replay.moving_average is not None:
@@ -352,7 +343,7 @@ def main(cfg: "DictConfig"):
             # to check statistics of the mico_distance
             # data = loss_module.calculate_mico_distance(data)
 
-            replay_buffer.extend(data)
+            # replay_buffer.extend(data)
 
             # Update the statistics
             episode_rewards = data["next", "episode_reward"][data["next", "done"]]
