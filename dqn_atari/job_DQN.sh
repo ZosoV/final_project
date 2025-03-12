@@ -73,7 +73,8 @@ echo "Starting task with seed $SEED at $(date)"
 python dqn.py -m \
     env.env_name=${GAME_NAME:-Asteroids} \
     env.seed=$SEED \
-    run_name=DQN_${GAME_NAME:-Asteroids}_$SEED
+    run_name=DQN_${GAME_NAME:-Asteroids}_$SEED \
+    logger.mode=disabled
 echo "Completed task with seed $SEED at $(date)"
 
 
