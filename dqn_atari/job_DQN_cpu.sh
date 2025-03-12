@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=bisimulation-rl-DQN-Frostbite
-#SBATCH --array=0
+#SBATCH --job-name=bisimulation-rl-DQN-Hero
+#SBATCH --array=0-2
 #SBATCH --ntasks=1
 #SBATCH --time=9-00:00:00
 #SBATCH --qos=bbdefault
@@ -15,7 +15,7 @@
 # export TMPDIR=${BB_WORKDIR}
 # export EXP_BUFF=${BB_WORKDIR}
 
-GAME_NAME=Frostbite
+GAME_NAME=Hero
 
 # Check if an argument is provided
 if [ -z "$1" ]; then

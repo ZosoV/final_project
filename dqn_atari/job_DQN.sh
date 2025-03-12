@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN-${GAME_NAME:-Asteroids}
 #SBATCH --array=0
+#SBATCH --nodes=1
 #SBATCH --ntasks=18
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-type=ALL
