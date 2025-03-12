@@ -27,7 +27,7 @@ import torch
 
 from tensordict.nn import TensorDictSequential
 # from torchrl._utils import logger as torchrl_logger
-from torchrl.collectors import SyncDataCollector
+from torchrl.collectors import SyncDataCollector, MultiSyncDataCollector
 from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer, LazyMemmapStorage
 from torchrl.envs import ExplorationType, set_exploration_type
 from torchrl.modules import EGreedyModule
@@ -167,18 +167,33 @@ def main(cfg: "DictConfig"):
     # Create the collector
     # NOTE: warmup_steps: Number of frames 
     # for which the policy is ignored before it is called.
-    collector = SyncDataCollector(
-        create_env_fn=make_env(cfg.env.env_name,
+    # collector = SyncDataCollector(
+    #     create_env_fn=make_env(cfg.env.env_name,
+    #                             frame_stack = frame_stack,
+    #                             device = "cpu", 
+    #                             seed = cfg.env.seed),
+    #     policy=model_explore,
+    #     frames_per_batch=frames_per_batch,
+    #     exploration_type=ExplorationType.RANDOM,
+    #     device="cpu",
+    #     storing_device="cpu",
+    #     split_trajs=False,
+    #     init_random_frames=warmup_steps,
+    # )
+
+    env_maker = lambda: make_env(cfg.env.env_name,
                                 frame_stack = frame_stack,
                                 device = "cpu", 
-                                seed = cfg.env.seed),
+                                seed = cfg.env.seed)
+    collector = MultiSyncDataCollector(
+        create_env_fn=[env_maker, env_maker, env_maker, env_maker],
         policy=model_explore,
         frames_per_batch=frames_per_batch,
         exploration_type=ExplorationType.RANDOM,
-        device="cpu",
-        storing_device="cpu",
+        device=device,
         split_trajs=False,
         init_random_frames=warmup_steps,
+        cat_results="stack",     
     )
 
     # Create the replay buffer
@@ -208,7 +223,7 @@ def main(cfg: "DictConfig"):
         prefetch=10,
         storage=LazyTensorStorage(
             max_size=cfg.buffer.buffer_size,
-            device="cpu"  # Important: Ensures data is stored directly in RAM
+            device=device  # Important: Ensures data is stored directly in RAM
         ),
         batch_size=cfg.buffer.batch_size,
         sampler = sampler
@@ -359,7 +374,7 @@ def main(cfg: "DictConfig"):
                 continue
 
             # optimization steps            
-            sampled_tensordict = replay_buffer.sample(batch_size).to(device)
+            sampled_tensordict = replay_buffer.sample(batch_size) #.to(device)
 
             # Also the loss module will use the current and target model to get the q-values
             loss = loss_module(sampled_tensordict)

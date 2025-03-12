@@ -27,7 +27,7 @@ import torch
 
 from tensordict.nn import TensorDictSequential
 # from torchrl._utils import logger as torchrl_logger
-from torchrl.collectors import SyncDataCollector
+from torchrl.collectors import SyncDataCollector, MultiSyncDataCollector
 from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer, LazyMemmapStorage
 from torchrl.envs import ExplorationType, set_exploration_type
 from torchrl.modules import EGreedyModule
@@ -181,6 +181,22 @@ def main(cfg: "DictConfig"):
         split_trajs=False,
         init_random_frames=warmup_steps,
     )
+    # env_maker = lambda: make_env(cfg.env.env_name,
+    #                             frame_stack = frame_stack,
+    #                             device = "cpu", 
+    #                             seed = cfg.env.seed)
+    # collector = MultiSyncDataCollector(
+    #     create_env_fn=[env_maker, env_maker, env_maker, env_maker],
+    #     policy=model_explore,
+    #     frames_per_batch=frames_per_batch,
+    #     exploration_type=ExplorationType.RANDOM,
+    #     env_device="cpu",
+    #     storing_device="cpu",
+    #     policy_device="cpu",
+    #     split_trajs=False,
+    #     init_random_frames=warmup_steps,
+    #     cat_results="stack",     
+    # )
 
     # Create the replay buffer
     if enable_prioritized_replay:
