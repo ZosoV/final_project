@@ -74,7 +74,8 @@ def main(cfg: "DictConfig"):
         # NOTE: This step is needed to have reproducibility
         # But it reduces a little bit the performance
         # if I don't need reproducibility I could comment this line
-        # torch.backends.cudnn.benchmark = False
+        # torch.backends.cudnn.benchmark = True  # Speeds up convolution layers
+        # torch.backends.cudnn.deterministic = False  # Allows non-deterministic but faster behavior
 
     # Set variables
     frames_per_batch = cfg.collector.frames_per_batch
