@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=bisimulation-rl-DQN-Hero
+#SBATCH --job-name=bisimulation-rl-DQN
 #SBATCH --array=0
 #SBATCH --ntasks=1
 #SBATCH --time=9-00:00:00
@@ -15,7 +15,7 @@
 # export TMPDIR=${BB_WORKDIR}
 # export EXP_BUFF=${BB_WORKDIR}
 
-GAME_NAME=Hero
+# GAME_NAME=Alien
 
 # Check if an argument is provided
 if [ -z "$1" ]; then
