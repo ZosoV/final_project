@@ -177,7 +177,7 @@ def main(cfg: "DictConfig"):
         exploration_type=ExplorationType.RANDOM,
         env_device="cpu",
         storing_device="cpu",
-        policy_device=device,
+        policy_device="cpu",
         split_trajs=False,
         init_random_frames=warmup_steps,
     )
@@ -206,7 +206,7 @@ def main(cfg: "DictConfig"):
 
     replay_buffer = TensorDictReplayBuffer(
         pin_memory=False,
-        prefetch=10,
+        prefetch=64,
         storage=LazyMemmapStorage( # NOTE: additional line
             max_size=cfg.buffer.buffer_size,
             scratch_dir=scratch_dir,
