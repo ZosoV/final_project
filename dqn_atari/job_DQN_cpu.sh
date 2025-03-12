@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN-Hero
-#SBATCH --array=0-2
+#SBATCH --array=0
 #SBATCH --ntasks=1
 #SBATCH --time=9-00:00:00
 #SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
-#SBATCH --cpus-per-task=72
+#SBATCH --cpus-per-task=60
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
 #SBATCH --constraint=sapphire
 
