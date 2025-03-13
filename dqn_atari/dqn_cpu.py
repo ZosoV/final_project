@@ -182,7 +182,6 @@ def main(cfg: "DictConfig"):
         ),
         batch_size=cfg.buffer.batch_size,
         sampler = sampler,
-        shared = True
     )
 
     # Create the collector
@@ -215,7 +214,6 @@ def main(cfg: "DictConfig"):
         split_trajs=False,
         init_random_frames=warmup_steps,
         cat_results="stack",
-        replay_buffer = replay_buffer,     
     )
 
 
@@ -343,7 +341,7 @@ def main(cfg: "DictConfig"):
             # to check statistics of the mico_distance
             # data = loss_module.calculate_mico_distance(data)
 
-            # replay_buffer.extend(data)
+            replay_buffer.extend(data)
 
             # Update the statistics
             episode_rewards = data["next", "episode_reward"][data["next", "done"]]
