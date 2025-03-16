@@ -141,6 +141,8 @@ def main(cfg: "DictConfig"):
             device = "cpu"
     device = torch.device(device)
 
+    device_steps = cfg.running_setup.device_steps
+
     # Print the current seed and group
     print(f"Running with Seed: {seed} on Device: {device}")
 
@@ -186,16 +188,16 @@ def main(cfg: "DictConfig"):
     # )
     env_maker = lambda: make_env(cfg.env.env_name,
                                 frame_stack = frame_stack,
-                                device = "cpu", 
+                                device = device_steps, 
                                 seed = cfg.env.seed)
     collector = MultiSyncDataCollector(
         create_env_fn=[env_maker] * cfg.running_setup.num_envs,
         policy=model_explore,
         frames_per_batch=frames_per_batch,
         exploration_type=ExplorationType.RANDOM,
-        env_device="cpu",
-        storing_device="cpu",
-        policy_device="cpu",
+        env_device=device_steps,
+        storing_device=device_steps,
+        policy_device=device_steps,
         split_trajs=False,
         init_random_frames=warmup_steps,
         cat_results="stack",     
@@ -232,7 +234,7 @@ def main(cfg: "DictConfig"):
         storage = LazyMemmapStorage( # NOTE: additional line
                 max_size=cfg.buffer.buffer_size,
                 scratch_dir=scratch_dir,
-                device = "cpu"
+                device = device_steps
             )
 
     replay_buffer = TensorDictReplayBuffer(

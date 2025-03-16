@@ -1,11 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN-${GAME_NAME:-Asteroids}
 #SBATCH --array=0
-#SBATCH --nodes=1
-#SBATCH --ntasks=18
+#SBATCH --ntasks=1
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=36
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
 #SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
@@ -72,8 +73,8 @@ python dqn_torchrl.py -m \
     env.env_name=${GAME_NAME:-Asteroids} \
     env.seed=$SEED \
     run_name=DQN_${GAME_NAME:-Asteroids}_$SEED \
-    logger.mode=disabled
-echo "Completed task with seed $SEED at $(date)"
+
+    echo "Completed task with seed $SEED at $(date)"
 
 
 # Cleanup
