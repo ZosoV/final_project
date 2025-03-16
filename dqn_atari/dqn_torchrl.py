@@ -186,16 +186,16 @@ def main(cfg: "DictConfig"):
     # )
     env_maker = lambda: make_env(cfg.env.env_name,
                                 frame_stack = frame_stack,
-                                device = device, 
+                                device = "cpu", 
                                 seed = cfg.env.seed)
     collector = MultiSyncDataCollector(
-        create_env_fn=[env_maker, env_maker, env_maker, env_maker],
+        create_env_fn=[env_maker] * 8,
         policy=model_explore,
         frames_per_batch=frames_per_batch,
         exploration_type=ExplorationType.RANDOM,
-        env_device=device,
-        storing_device=device,
-        policy_device=device,
+        env_device="cpu",
+        storing_device="cpu",
+        policy_device="cpu",
         split_trajs=False,
         init_random_frames=warmup_steps,
         cat_results="stack",     
@@ -224,12 +224,12 @@ def main(cfg: "DictConfig"):
     print(f"Using scratch_dir: {scratch_dir}")
 
     replay_buffer = TensorDictReplayBuffer(
-        pin_memory=True,
-        prefetch=10,
+        pin_memory=False,
+        prefetch=16,
         storage=LazyMemmapStorage( # NOTE: additional line
             max_size=cfg.buffer.buffer_size,
             scratch_dir=scratch_dir,
-            # device = device
+            device = "cpu"
         ),
         batch_size=cfg.buffer.batch_size,
         sampler = sampler

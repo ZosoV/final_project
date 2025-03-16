@@ -9,7 +9,6 @@
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
 #SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
-#SBATCH --constraint=icelake
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
