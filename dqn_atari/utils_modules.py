@@ -7,7 +7,11 @@ from collections import deque
 import utils_metric
 import wandb
 import numpy as np
-
+from torchrl.envs.utils import step_mdp
+from torchrl.objectives.utils import (
+    _reduce,
+    distance_loss,
+)
 # from . import utils_metric
 
 class MICODQNLoss(DQNLoss):
@@ -27,23 +31,99 @@ class MICODQNLoss(DQNLoss):
 
     def forward(self, tensordict: TensorDictBase) -> TensorDict:
         # Compute the loss
-        td_loss = super().forward(tensordict)
+        # td_loss = super().forward(tensordict)
+        td_loss, td_copy = self.dqn_forward(tensordict)
 
         # Compute the MICODQN loss
-        mico_loss = self.micodqn_loss(tensordict)
+        mico_loss = self.mico_forward(tensordict, td_copy)
 
         total_loss = ((1. - self.mico_weight) * td_loss["loss"] + self.mico_weight * mico_loss)    
 
         return TensorDict({"loss": total_loss, "td_loss": td_loss["loss"], "mico_loss": mico_loss}, [])
+    
+    def dqn_forward(self, tensordict: TensorDictBase) -> TensorDict:
+        """Computes the DQN loss given a tensordict sampled from the replay buffer.
 
-    def micodqn_loss(self, tensordict: TensorDictBase) -> TensorDict:
+        This function will also write a "td_error" key that can be used by prioritized replay buffers to assign
+            a priority to items in the tensordict.
+
+        Args:
+            tensordict (TensorDictBase): a tensordict with keys ["action"] and the in_keys of
+                the value network (observations, "done", "terminated", "reward" in a "next" tensordict).
+
+        Returns:
+            a tensor containing the DQN loss.
+
+        """
+        td_copy = tensordict.clone(False)
+        with self.value_network_params.to_module(self.value_network):
+            self.value_network(td_copy)
+
+        action = tensordict.get(self.tensor_keys.action)
+        pred_val = td_copy.get(self.tensor_keys.action_value)
+
+        if self.action_space == "categorical":
+            if action.ndim != pred_val.ndim:
+                # unsqueeze the action if it lacks on trailing singleton dim
+                action = action.unsqueeze(-1)
+            pred_val_index = torch.gather(pred_val, -1, index=action).squeeze(-1)
+        else:
+            action = action.to(torch.float)
+            pred_val_index = (pred_val * action).sum(-1)
+
+        if self.double_dqn:
+            step_td = step_mdp(td_copy, keep_other=False)
+            step_td_copy = step_td.clone(False)
+            # Use online network to compute the action
+            with self.value_network_params.data.to_module(self.value_network):
+                self.value_network(step_td)
+                next_action = step_td.get(self.tensor_keys.action)
+
+            # Use target network to compute the values
+            with self.target_value_network_params.to_module(self.value_network):
+                self.value_network(step_td_copy)
+                next_pred_val = step_td_copy.get(self.tensor_keys.action_value)
+
+            if self.action_space == "categorical":
+                if next_action.ndim != next_pred_val.ndim:
+                    # unsqueeze the action if it lacks on trailing singleton dim
+                    next_action = next_action.unsqueeze(-1)
+                next_value = torch.gather(next_pred_val, -1, index=next_action)
+            else:
+                next_value = (next_pred_val * next_action).sum(-1, keepdim=True)
+        else:
+            next_value = None
+        target_value = self.value_estimator.value_estimate(
+            td_copy,
+            target_params=self.target_value_network_params,
+            next_value=next_value,
+        ).squeeze(-1)
+
+        with torch.no_grad():
+            priority_tensor = (pred_val_index - target_value).pow(2)
+            priority_tensor = priority_tensor.unsqueeze(-1)
+        if tensordict.device is not None:
+            priority_tensor = priority_tensor.to(tensordict.device)
+
+        tensordict.set(
+            self.tensor_keys.priority,
+            priority_tensor,
+            inplace=True,
+        )
+        loss = distance_loss(pred_val_index, target_value, self.loss_function)
+        loss = _reduce(loss, reduction=self.reduction)
+        td_out = TensorDict({"loss": loss}, [])
+    
+        return td_out, td_copy
+
+    def mico_forward(self, tensordict: TensorDictBase, tensordict_copy: TensorDictBase) -> TensorDict:
         # Compute the MICODQN loss
 
-        td_online_copy = tensordict.clone(False)
+        td_online_copy = tensordict_copy
         with self.value_network_params.to_module(self.value_network):
             self.value_network(td_online_copy)
 
-        representations = td_online_copy['representation']
+        representations = td_online_copy.get('representation').clone()
 
         # NOTE: In the code implementation, the author decided to compare the representations of 
         # the current states above vs all the representation of the current state but evaluated 
@@ -51,18 +131,18 @@ class MICODQNLoss(DQNLoss):
 
         # Additionally, the next states passed throught the target network are needed for calculate
         # the target distance. Then, we are gonna pass the whole batch through the target network
-        td_target_copy = tensordict.clone(False)
+        td_target_copy = tensordict_copy
         with self.target_value_network_params.to_module(self.value_network):
             with torch.no_grad():
                 self.value_network(td_target_copy)
                 self.value_network(td_target_copy['next'])
-                target_r = td_target_copy['representation'].detach()
-                target_next_r = td_target_copy['next', 'representation'].detach()
+                target_r = td_target_copy.get('representation') #.detach()
+                target_next_r = td_target_copy.get(('next', 'representation')) #.detach()
                 # target_r = batch_target_representation[0::2]
                 # target_next_r = batch_target_representation[1::2]
 
         # NOTE: the rewards are gotten from the next keys of the current states (even rows)
-        rewards = td_online_copy['next','reward']
+        rewards = td_online_copy.get(('next','reward'))
 
         online_dist = utils_metric.representation_distances(
         representations, target_r, self.mico_beta)
@@ -74,9 +154,9 @@ class MICODQNLoss(DQNLoss):
         # TODO: check if I need to use the vmap, if not use the other that
         # the library proposes
         # TODO: check what is hubber loss hahaha =D
-        # mico_loss = torch.mean(torch.vmap(huber_loss)(online_dist,
-        #                                                 target_dist))
-        mico_loss = torch.mean(huber_loss(online_dist, target_dist))
+        mico_loss = torch.mean(torch.vmap(huber_loss)(online_dist,
+                                                        target_dist))
+        # mico_loss = torch.mean(huber_loss(online_dist, target_dist))
 
         # MICO Priority Calculation
 
@@ -127,7 +207,7 @@ class MICODQNLoss(DQNLoss):
                     raise ValueError("Invalid priority type")
 
 
-            # TODO: I don't why an unsqueeze is needed
+            # TODO: I don't know why I need to an unsqueeze is needed
             mico_distance = mico_distance.unsqueeze(-1)
 
             if tensordict.device is not None:
