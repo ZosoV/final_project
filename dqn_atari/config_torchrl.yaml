@@ -1,0 +1,111 @@
+# This file allow me to set
+# DQN
+# DQN + PER
+# DQN + BPER
+# DQN + BPER + moving average
+# DQN + MICO
+# DQN + MICO + PER
+# DQN + MICO + BPER
+# DQN + MICO + BPER + moving average
+
+# I think the most interesting is to compare
+# DQN + MICO + PER
+# DQN + MICO + BPER
+
+# For reference (DQN + MICo ask to PSC)
+# DQN
+# DQN + MICO
+
+run_name: DQN_atari
+project_name: "atari_benchmark"
+group_name: null
+device: null
+
+
+# logger
+logger:
+  mode: "offline" # "online" or "disabled" ("offline" too but not used)
+  save_checkpoint: False
+  save_checkpoint_freq: 50
+  load_checkpoint: False
+  load_checkpoint_path: null
+  evaluation:
+    enable: False
+    eval_freq: 1000
+
+# Environment
+# SEEDS: [118398, 676190, 786456, 171936, 887739, 919409, 711872, 442081, 189061, 117840]
+env:
+  env_name: Asteroids # Asteroids
+  seed: 118398
+
+# collector
+# Total time steps corresponds to num_iterations * training_steps
+# In other words, there are num_iterations cycles of training_steps steps each
+# After each iteration the metrics are flushed
+
+# In atari benchmark, they use 200M frames but this includes the skiped frames
+# so it means that the agent only makes 50M actual decisions (steps)
+# with 200 num iterations and 250_000 training steps we get 50M steps
+
+# NOTE: the franes_per_batch is the update_period in Dopamine
+# However, to gain training time, we can decouple the env steps and train steps
+# because TorchRL allow us to do that. So, if we want to train faster we can
+#  increase the frames_per_batch and proportionally increase the num_updates 
+# to keep an effective update_period of 4 steps
+
+# For example 400 frames_per_batch and 100 num_updates will give us an effective
+# update_period of 4 steps
+
+collector:
+  num_iterations: 201 # 201
+  training_steps: 250_000 # 250_000 # agent steps
+  frames_per_batch: 400 # update_period in Dopamine # agent steps # BO
+  epsilon_start: 1.0
+  epsilon_end: 0.01
+  epsilon_decay_period: 250_000 # TODO: decay has to init after warmup # agent steps
+  warmup_steps: 20_000 # 20_004 # min_replay_history in Dopamine # agent steps
+  frame_stack: 4
+
+# policy
+policy:
+  cnn_net:
+    num_cells: [32, 64, 64] # number of kernel per layer
+    kernel_sizes: [8, 4, 3]
+    strides: [4, 2, 1]
+  mlp_net:
+    num_cells: [512]  # Number of units per layer
+  activation: "ReLU"  # Activation function used in the layers
+  use_batch_norm: False
+
+# buffer
+buffer:
+  buffer_size: 1_000_000
+  batch_size: 32
+  scratch_dir: null
+  prioritized_replay:
+    enable: False
+    priority_type: "BPERcn" # "BPERcn" # "BPERaa: all_vs_all" or "BPERcn: current_vs_next" or PER
+    priority_weight: 1.0 # 1.0 full BPER and 0 PER (only avaiable when using mico)
+    moving_average: null # Normalize the priorities with a moving average over mean and std over time
+    alpha: 0.6 # alpha: priority exponent
+    beta: 0.4 # beta: importance sampling exponent
+
+# Optim
+optim:
+  lr: 6.25e-5
+  max_grad_norm: null
+  eps: 1.5e-4 # default: 1e-08 # rainbow 1.5e-4
+
+# loss
+loss:
+  double_dqn: False
+  gamma: 0.99 #
+  target_update_period: 8_000
+  num_updates: 100 
+  mico_loss:
+    enable: False
+    mico_weight: 0.01 #0.5 # 0.01 for DQN and Rainbow
+    mico_beta: 0.1
+    mico_gamma: 0.99
+

@@ -7,7 +7,7 @@
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
 #SBATCH --account=giacobbm-bisimulation-rl
-#SBATCH --gres=gpu:a30:1
+#SBATCH --gres=gpu:a100:1
 #SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
 #SBATCH --constraint=icelake
 
