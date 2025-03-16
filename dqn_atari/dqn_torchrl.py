@@ -189,7 +189,7 @@ def main(cfg: "DictConfig"):
                                 device = "cpu", 
                                 seed = cfg.env.seed)
     collector = MultiSyncDataCollector(
-        create_env_fn=[env_maker] * 8,
+        create_env_fn=[env_maker] * cfg.running_setup.num_envs,
         policy=model_explore,
         frames_per_batch=frames_per_batch,
         exploration_type=ExplorationType.RANDOM,
@@ -223,14 +223,22 @@ def main(cfg: "DictConfig"):
 
     print(f"Using scratch_dir: {scratch_dir}")
 
+    if cfg.running_setup.enable_lazy_tensor_buffer:
+        storage = LazyTensorStorage(
+            max_size=cfg.buffer.buffer_size,
+            device=device  # Important: Ensures data is stored directly in RAM
+        )
+    else:
+        storage = LazyMemmapStorage( # NOTE: additional line
+                max_size=cfg.buffer.buffer_size,
+                scratch_dir=scratch_dir,
+                device = "cpu"
+            )
+
     replay_buffer = TensorDictReplayBuffer(
         pin_memory=False,
-        prefetch=16,
-        storage=LazyMemmapStorage( # NOTE: additional line
-            max_size=cfg.buffer.buffer_size,
-            scratch_dir=scratch_dir,
-            device = "cpu"
-        ),
+        prefetch=cfg.running_setup.prefetch,
+        storage=storage,
         batch_size=cfg.buffer.batch_size,
         sampler = sampler
     )

@@ -109,3 +109,8 @@ loss:
     mico_beta: 0.1
     mico_gamma: 0.99
 
+# Currently set for GPU
+running_setup:
+  num_envs: 8 # 8 for cpu (or more)
+  prefetch: 16 # 32 for cpu (or more)
+  enable_lazy_tensor_buffer : False # True for cpu

@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=bisimulation-rl-DQN
+#SBATCH --job-name=bisimulation-rl-DQN_Asteroids
 #SBATCH --array=0
 #SBATCH --ntasks=1
-#SBATCH --time=9-00:00:00
+#SBATCH --time=10-00:00:00
 #SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
 #SBATCH --cpus-per-task=36
@@ -11,13 +11,7 @@
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
 #SBATCH --constraint=sapphire
 
-# Temporary scratch space for I/O efficiency
-# BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
-# BB_WORKDIR=$(mktemp -d /rds/projects/g/giacobbm-bisimulation-rl/${USER}_${SLURM_JOBID}.XXXXXX)
-# export TMPDIR=${BB_WORKDIR}
-# export EXP_BUFF=${BB_WORKDIR}
-
-# GAME_NAME=Alien
+GAME_NAME=Asteroids
 
 # Check if an argument is provided
 if [ -z "$1" ]; then
@@ -74,10 +68,14 @@ seeds=(118398 919409 711872 442081 189061)
 SEED=${seeds[$SLURM_ARRAY_TASK_ID]}
 
 echo "Starting task with seed $SEED at $(date)"
-python dqn_cpu.py -m \
+python dqn_torchrl.py -m \
+    device=cpu \
     env.env_name=${GAME_NAME:-Asteroids} \
     env.seed=$SEED \
-    run_name=DQN_${GAME_NAME:-Asteroids}_$SEED
+    run_name=DQN_${GAME_NAME:-Asteroids}_$SEED \
+    running_setup.num_envs=8 \
+    running_setup.prefetch=16 \
+    running_setup.enable_lazy_tensor_buffers=True 
 echo "Completed task with seed $SEED at $(date)"
 
 echo "Exiting."

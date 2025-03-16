@@ -24,6 +24,7 @@ import wandb
 import random
 import numpy as np
 import torch
+import math
 
 from tensordict.nn import TensorDictSequential
 # from torchrl._utils import logger as torchrl_logger
@@ -57,7 +58,7 @@ import gymnasium as gym
 import ale_py
 import os
 
-@hydra.main(config_path=".", config_name="config", version_base=None)
+@hydra.main(config_path=".", config_name="config_cpu", version_base=None)
 def main(cfg: "DictConfig"):
 
     # Register the environments
@@ -81,6 +82,7 @@ def main(cfg: "DictConfig"):
     warmup_steps = cfg.collector.warmup_steps
     training_steps = cfg.collector.training_steps
     frame_stack = cfg.collector.frame_stack
+    num_updates = cfg.loss.num_updates
 
     enable_grad_clipping = True if cfg.optim.max_grad_norm is not None else False
     max_grad = cfg.optim.max_grad_norm
@@ -175,7 +177,7 @@ def main(cfg: "DictConfig"):
 
     replay_buffer = TensorDictReplayBuffer(
         pin_memory=False,
-        prefetch=16,
+        prefetch=cfg.running_setup.prefetch,
         storage=LazyTensorStorage(
             max_size=cfg.buffer.buffer_size,
             device=device  # Important: Ensures data is stored directly in RAM
@@ -206,7 +208,7 @@ def main(cfg: "DictConfig"):
                                 device = "cpu", 
                                 seed = cfg.env.seed)
     collector = MultiSyncDataCollector(
-        create_env_fn=[env_maker, env_maker, env_maker, env_maker],
+        create_env_fn=[env_maker] * cfg.running_setup.num_envs,
         policy=model_explore,
         frames_per_batch=frames_per_batch,
         exploration_type=ExplorationType.RANDOM,
