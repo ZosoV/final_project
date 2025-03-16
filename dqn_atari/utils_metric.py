@@ -152,7 +152,7 @@ def target_distances(representations, rewards, cumulative_gamma):
       (squared_rews_transp.shape[0]**2))
   reward_diffs = torch.abs(squared_rews - squared_rews_transp)
   target_dist = reward_diffs + cumulative_gamma * next_state_similarities
-  return target_dist.detach()
+  return target_dist
 
 
 @torch.no_grad()
@@ -176,7 +176,7 @@ def current_vs_next_mico_priorities(
   # the current and next state
   # return mico_distance.repeat_interleave(2).detach()
   # Interleave was needed before that we were using trajectories
-  return mico_distance.detach()
+  return mico_distance 
 
 @torch.no_grad()
 def all_vs_all_mico_priorities(first_batch_representation = None, 
@@ -197,5 +197,5 @@ def all_vs_all_mico_priorities(first_batch_representation = None,
     # Apply the reshape to get the distances of all the pairs, and get the mean
     # of the distances of the current states
     all_vs_all_mico_distances = all_vs_all_mico_distances.reshape((batch_size,batch_size))
-    return all_vs_all_mico_distances.mean(-1).detach()
+    return all_vs_all_mico_distances.mean(-1)
 

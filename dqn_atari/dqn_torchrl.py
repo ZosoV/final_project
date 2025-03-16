@@ -45,7 +45,7 @@ from utils_dqn import (
     print_hyperparameters,
     update_tensor_dict_next_next_rewards
 )
-from utils_modules import MICODQNLoss, MovingAverageNormalization, DQNLogger
+from utils_modules import MICODQNLoss, MovingAverageNormalization
 
 import tempfile
 
@@ -379,7 +379,7 @@ def main(cfg: "DictConfig"):
                 
                 # Get episode num_steps
                 episode_num_steps = data["next", "step_count"][data["next", "done"]]
-                num_steps += episode_num_steps.sum().detach().item()
+                num_steps += episode_num_steps.sum().item()
 
             # Warmup phase (due to the continue statement)
             # Additionally This help us to keep a track of the steps_so_far
@@ -443,15 +443,15 @@ def main(cfg: "DictConfig"):
         if steps_so_far >= warmup_steps:
             info2flush = {
                 "train/epsilon": greedy_module.eps.item(),
-                "train/average_q_value": torch.gather(data["action_value"], 1, data["action"].unsqueeze(1)).detach().mean().item(),
+                "train/average_q_value": torch.gather(data["action_value"], 1, data["action"].unsqueeze(1)).mean().item(),
                 "train/average_steps_per_second": average_steps_per_second,
-                "train/average_total_loss": loss["loss"].detach().mean().item(),
-                "train/average_td_loss": loss["loss"].detach().mean().item(),
+                "train/average_total_loss": loss["loss"].mean().item(),
+                "train/average_td_loss": loss["loss"].mean().item(),
             }
             if enable_mico:
                 info2flush.update({
-                    "train/average_mico_loss": loss["mico_loss"].detach().mean().item(),
-                    "train/average_td_loss": loss["td_loss"].detach().mean().item(),
+                    "train/average_mico_loss": loss["mico_loss"].mean().item(),
+                    "train/average_td_loss": loss["td_loss"].mean().item(),
                 })
             
             if number_of_episodes > 0:

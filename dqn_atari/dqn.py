@@ -44,7 +44,7 @@ from utils_dqn import (
     print_hyperparameters,
     update_tensor_dict_next_next_rewards
 )
-from utils_modules import MICODQNLoss, MovingAverageNormalization, DQNLogger
+from utils_modules import MICODQNLoss, MovingAverageNormalization
 
 import tempfile
 
