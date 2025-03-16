@@ -74,7 +74,7 @@ python dqn_torchrl.py -m \
     env.seed=$SEED \
     run_name=DQN_${GAME_NAME:-Asteroids}_$SEED \
 
-    echo "Completed task with seed $SEED at $(date)"
+echo "Completed task with seed $SEED at $(date)"
 
 
 # Cleanup

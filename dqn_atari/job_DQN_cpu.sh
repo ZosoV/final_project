@@ -5,7 +5,7 @@
 #SBATCH --time=10-00:00:00
 #SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
-#SBATCH --cpus-per-task=36
+#SBATCH --cpus-per-task=54
 #SBATCH --nodes=1
 #SBATCH --mem=366G
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
@@ -73,7 +73,7 @@ python dqn_torchrl.py -m \
     env.env_name=${GAME_NAME:-Asteroids} \
     env.seed=$SEED \
     run_name=DQN_${GAME_NAME:-Asteroids}_$SEED \
-    running_setup.num_envs=4 \
+    running_setup.num_envs=8 \
     running_setup.prefetch=16 \
     running_setup.enable_lazy_tensor_buffer=True
 echo "Completed task with seed $SEED at $(date)"

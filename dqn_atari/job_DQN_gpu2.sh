@@ -76,7 +76,7 @@ python dqn_torchrl.py -m \
     run_name=DQN_${GAME_NAME:-Asteroids}_$SEED \
     running_setup.enable_lazy_tensor_buffer=True
 
-    echo "Completed task with seed $SEED at $(date)"
+echo "Completed task with seed $SEED at $(date)"
 
 
 # Cleanup
