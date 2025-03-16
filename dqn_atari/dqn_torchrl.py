@@ -75,7 +75,7 @@ def main(cfg: "DictConfig"):
         # NOTE: This step is needed to have reproducibility
         # But it reduces a little bit the performance
         # if I don't need reproducibility I could comment this line
-        # torch.backends.cudnn.benchmark = True  # Speeds up convolution layers
+        torch.backends.cudnn.benchmark = True  # Speeds up convolution layers
         # torch.backends.cudnn.deterministic = False  # Allows non-deterministic but faster behavior
 
     # Set variables
@@ -389,7 +389,7 @@ def main(cfg: "DictConfig"):
 
             # optimization steps
             for j in range(num_updates):            
-                sampled_tensordict = replay_buffer.sample(batch_size).to(device)
+                sampled_tensordict = replay_buffer.sample(batch_size).to(device)#, non_blocking=True)
 
                 # Also the loss module will use the current and target model to get the q-values
                 loss = loss_module(sampled_tensordict)
