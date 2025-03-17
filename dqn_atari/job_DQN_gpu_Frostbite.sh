@@ -1,16 +1,26 @@
 #!/bin/bash
-#SBATCH --job-name=bisimulation-rl-DQN-${GAME_NAME:-Asteroids}
+#SBATCH --job-name=bisimulation-rl-DQN-Frostbite
 #SBATCH --array=0
 #SBATCH --ntasks=1
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=36
-#SBATCH --mem=366G
-#SBATCH --account=giacobbm-bisimulation-rl
+#SBATCH --cpus-per-task=28
+#SBATCH --mem-per-cpu=8GB
+##SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
 #SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
+
+module purge; module load bluebear
+module load bear-apps/2023a
+module load Python/3.11.3-GCCcore-12.3.0
+module load tqdm/4.66.1-GCCcore-12.3.0
+# module load PyTorch/2.1.2-foss-2023a-CUDA-12.1.1
+# module load torchvision/0.16.0-foss-2023a-CUDA-12.1.1
+# module load bear-apps/2022a
+# module load wandb/0.13.6-GCC-11.3.0
+
+GAME_NAME=Frostbite
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -32,9 +42,9 @@ export WANDB_API_KEY=$1
 set -x  # Enable debug mode
 set -e
 
-module purge; module load bluebear
-module load bear-apps/2021b
-module load Python/3.9.6-GCCcore-11.2.0
+
+
+# pip install torch==2.3.1 torchvision==0.18.1
 
 PROJECT_DIR="/rds/projects/g/giacobbm-bisimulation-rl"
 export VENV_DIR="${PROJECT_DIR}/virtual-environments"
@@ -61,7 +71,7 @@ PIP_CACHE_DIR="/scratch/${USER}/pip"
 pip install torchrl==0.4.0 
 pip install tensordict==0.4.0
 pip install torch==2.3.1 torchvision==0.18.1
-pip install wandb hydra-core tqdm
+pip install hydra-core wandb
 pip install gymnasium==0.29.1 gymnasium[classic-control]
 pip install ale-py gymnasium[other]
 
@@ -71,17 +81,52 @@ seeds=(118398 919409 711872 442081 189061)
 SEED=${seeds[$SLURM_ARRAY_TASK_ID]}
 
 echo "Starting task with seed $SEED at $(date)"
-python dqn_torchrl.py -m \
-    env.env_name=${GAME_NAME:-Asteroids} \
-    env.seed=$SEED \
-    run_name=DQN_${GAME_NAME:-Asteroids}_$SEED \
-    running_setup.enable_lazy_tensor_buffer=True
+
+VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
+
+# Execute based on the selected variant
+if [ "$VARIANT" == "BPER" ]; then
+    python dqn_torchl.py -m \
+        env.seed=$SEED \
+        env.env_name=$GAME_NAME \
+        loss.mico_loss.enable=True \
+        buffer.prioritized_replay.enable=True \
+        buffer.prioritized_replay.priority_type=BPERcn \
+        run_name=DQN_MICO_BPER_${GAME_NAME}_$SEED
+
+elif [ "$VARIANT" == "PER" ]; then
+    python dqn_torchl.py -m \
+        env.seed=$SEED \
+        env.env_name=$GAME_NAME \
+        loss.mico_loss.enable=True \
+        buffer.prioritized_replay.enable=True \
+        buffer.prioritized_replay.priority_type=PER \
+        run_name=DQN_MICO_PER_${GAME_NAME}_$SEED
+
+elif [ "$VARIANT" == "MICO" ]; then
+    python dqn_torchl.py -m \
+        env.seed=$SEED \
+        env.env_name=$GAME_NAME \
+        loss.mico_loss.enable=True \
+        run_name=DQN_MICO_${GAME_NAME}_$SEED
+
+elif [ "$VARIANT" == "DQN" ]; then
+    python dqn_torchrl.py -m \
+        env.env_name=$GAME_NAME \
+        env.seed=$SEED \
+        run_name=DQN_${GAME_NAME}_$SEED
+
+else
+    echo "Unknown variant: $VARIANT"
+    exit 1
+fi
+
 
 echo "Completed task with seed $SEED at $(date)"
 
 
 # Cleanup
-sleep 300  # 5-minute buffer
+# sleep 300  # 5-minute buffer
 # test -d ${BB_WORKDIR}/wandb/ && /bin/cp -r ${BB_WORKDIR}/wandb/ ./outputs/wandb/
 test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}
 
