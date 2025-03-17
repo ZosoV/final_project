@@ -5,7 +5,6 @@
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
-#SBATCH --nodes=1
 #SBATCH --cpus-per-task=18
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
@@ -32,11 +31,19 @@ set -x  # Enable debug mode
 set -e
 
 module purge; module load bluebear
-module load bear-apps/2021b
-module load Python/3.9.6-GCCcore-11.2.0
+module load bear-apps/2023a
+module load Python/3.11.3-GCCcore-12.3.0
+module load tqdm/4.66.1-GCCcore-12.3.0
+module load PyTorch/2.1.2-foss-2023a-CUDA-12.1.1
+module load torchvision/0.16.0-foss-2023a-CUDA-12.1.1
+module load bear-apps/2022a
+module load wandb/0.13.6-GCC-11.3.0
 
-export VENV_DIR="${HOME}/virtual-environments"
-export VENV_PATH="${VENV_DIR}/my-virtual-env-${BB_CPU}"
+# pip install torch==2.3.1 torchvision==0.18.1
+
+PROJECT_DIR="/rds/projects/g/giacobbm-bisimulation-rl"
+export VENV_DIR="${PROJECT_DIR}/virtual-environments"
+export VENV_PATH="${VENV_DIR}/gpu-virtual-env-${BB_CPU}"
 
 # Create a master venv directory if necessary
 mkdir -p ${VENV_DIR}
@@ -58,8 +65,8 @@ PIP_CACHE_DIR="/scratch/${USER}/pip"
 # module is already installed in the virtual environment it won't be modified.
 pip install torchrl==0.4.0 
 pip install tensordict==0.4.0
-pip install torch==2.3.1 torchvision==0.18.1
-pip install wandb hydra-core tqdm
+# pip install torch==2.3.1 torchvision==0.18.1
+pip install hydra-core
 pip install gymnasium==0.29.1 gymnasium[classic-control]
 pip install ale-py gymnasium[other]
 
@@ -78,7 +85,7 @@ echo "Completed task with seed $SEED at $(date)"
 
 
 # Cleanup
-sleep 300  # 5-minute buffer
+# sleep 300  # 5-minute buffer
 # test -d ${BB_WORKDIR}/wandb/ && /bin/cp -r ${BB_WORKDIR}/wandb/ ./outputs/wandb/
 test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}
 

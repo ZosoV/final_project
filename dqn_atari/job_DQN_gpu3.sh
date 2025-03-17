@@ -5,7 +5,6 @@
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
-#SBATCH --nodes=1
 #SBATCH --cpus-per-task=36
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
@@ -35,8 +34,9 @@ module purge; module load bluebear
 module load bear-apps/2021b
 module load Python/3.9.6-GCCcore-11.2.0
 
-export VENV_DIR="${HOME}/virtual-environments"
-export VENV_PATH="${VENV_DIR}/my-virtual-env-${BB_CPU}"
+PROJECT_DIR="/rds/projects/g/giacobbm-bisimulation-rl"
+export VENV_DIR="${PROJECT_DIR}/virtual-environments"
+export VENV_PATH="${VENV_DIR}/gpu-virtual-env-${BB_CPU}"
 
 # Create a master venv directory if necessary
 mkdir -p ${VENV_DIR}

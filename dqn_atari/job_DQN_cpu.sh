@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=bisimulation-rl-DQN_Asteroids
+#SBATCH --job-name=bisimulation-rl-DQN_Alien
 #SBATCH --array=0
 #SBATCH --ntasks=1
 #SBATCH --time=10-00:00:00
@@ -11,7 +11,7 @@
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
 #SBATCH --constraint=sapphire
 
-GAME_NAME=Asteroids
+GAME_NAME=Alien
 
 # Check if an argument is provided
 if [ -z "$1" ]; then
@@ -27,14 +27,18 @@ export WANDB_API_KEY=$1
 set -x  # Enable debug mode
 set -e
 
+# TODO: Maybe change Python
 module purge; module load bluebear
-module load bear-apps/2021b
-module load Python/3.9.6-GCCcore-11.2.0
+module load bear-apps/2023a
+module load Python/3.11.3-GCCcore-12.3.0
+module load tqdm/4.66.1-GCCcore-12.3.0
+module load bear-apps/2022a
+module load wandb/0.13.6-GCC-11.3.0
 
 PROJECT_DIR="/rds/projects/g/giacobbm-bisimulation-rl"
 
 export VENV_DIR="${PROJECT_DIR}/virtual-environments"
-export VENV_PATH="${VENV_DIR}/cpu_virtual_env-${BB_CPU}"
+export VENV_PATH="${VENV_DIR}/cpu2_virtual_env-${BB_CPU}"
 
 # Create a master venv directory if necessary
 mkdir -p ${VENV_DIR}
@@ -57,7 +61,7 @@ PIP_CACHE_DIR="/scratch/${USER}/pip"
 pip install torchrl==0.4.0 
 pip install tensordict==0.4.0
 pip install torch==2.3.1 torchvision==0.18.1
-pip install wandb hydra-core tqdm
+pip install hydra-core
 pip install gymnasium==0.29.1 gymnasium[classic-control]
 pip install ale-py gymnasium[other]
 
