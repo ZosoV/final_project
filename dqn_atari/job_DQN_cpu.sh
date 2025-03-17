@@ -9,7 +9,6 @@
 #SBATCH --nodes=1
 #SBATCH --mem=366G
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
-#SBATCH --constraint=sapphire
 
 GAME_NAME=Alien
 
