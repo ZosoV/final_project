@@ -76,7 +76,9 @@ python dqn_torchl.py -m \
     env.seed=$SEED \
     env.env_name=${GAME_NAME:-Asteroids} \
     loss.mico_loss.enable=True \
-    run_name=DQN_MICO_${GAME_NAME:-Asteroids}_$SEED \
+    buffer.prioritized_replay.enable=True \
+    buffer.prioritized_replay.priority_type=PER \
+    run_name=DQN_MICO_PER_${GAME_NAME:-Asteroids}_$SEED \
     running_setup.enable_lazy_tensor_buffer=True
     
 echo "Completed task with seed $SEED at $(date)"
