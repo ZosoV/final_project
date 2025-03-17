@@ -19,7 +19,7 @@ module load tqdm/4.66.1-GCCcore-12.3.0
 # module load PyTorch/2.1.2-foss-2023a-CUDA-12.1.1
 # module load torchvision/0.16.0-foss-2023a-CUDA-12.1.1
 module load bear-apps/2022a
-module load wandb/0.13.6-GCC-11.3.0
+# module load wandb/0.13.6-GCC-11.3.0
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -70,7 +70,7 @@ PIP_CACHE_DIR="/scratch/${USER}/pip"
 pip install torchrl==0.4.0 
 pip install tensordict==0.4.0
 pip install torch==2.3.1 torchvision==0.18.1
-pip install hydra-core
+pip install hydra-core wandb
 pip install gymnasium==0.29.1 gymnasium[classic-control]
 pip install ale-py gymnasium[other]
 
