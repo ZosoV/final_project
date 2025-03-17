@@ -119,30 +119,32 @@ class MICODQNLoss(DQNLoss):
     def mico_forward(self, tensordict: TensorDictBase, tensordict_copy: TensorDictBase) -> TensorDict:
         # Compute the MICODQN loss
 
-        td_online_copy = tensordict_copy
+        # td_online_copy = tensordict_copy
+        # Online network
         with self.value_network_params.to_module(self.value_network):
-            self.value_network(td_online_copy)
+            self.value_network(tensordict_copy)
 
-        representations = td_online_copy.get('representation').clone()
+        representations = tensordict_copy.get('representation').clone()
 
         # NOTE: In the code implementation, the author decided to compare the representations of 
         # the current states above vs all the representation of the current state but evaluated 
         # in the target_network.
 
+        # Target network
         # Additionally, the next states passed throught the target network are needed for calculate
         # the target distance. Then, we are gonna pass the whole batch through the target network
-        td_target_copy = tensordict_copy
+        # td_target_copy = tensordict_copy
         with self.target_value_network_params.to_module(self.value_network):
             with torch.no_grad():
-                self.value_network(td_target_copy)
-                self.value_network(td_target_copy['next'])
-                target_r = td_target_copy.get('representation') #.detach()
-                target_next_r = td_target_copy.get(('next', 'representation')) #.detach()
+                self.value_network(tensordict_copy)
+                self.value_network(tensordict_copy['next'])
+                target_r = tensordict_copy.get('representation') #.detach()
+                target_next_r = tensordict_copy.get(('next', 'representation')) #.detach()
                 # target_r = batch_target_representation[0::2]
                 # target_next_r = batch_target_representation[1::2]
 
         # NOTE: the rewards are gotten from the next keys of the current states (even rows)
-        rewards = td_online_copy.get(('next','reward'))
+        rewards = tensordict_copy.get(('next','reward'))
 
         online_dist = utils_metric.representation_distances(
         representations, target_r, self.mico_beta)

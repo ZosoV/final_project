@@ -6,6 +6,7 @@
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
 #SBATCH --cpus-per-task=28
+#SBATCH --mem-per-cpu=8GB
 ##SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a30:1
 #SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
