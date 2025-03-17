@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=bisimulation-rl-DQN-${GAME_NAME:-Asteroids}
+#SBATCH --job-name=bisimulation-rl-DQN-Asteroids
 #SBATCH --array=0
 #SBATCH --ntasks=1
 #SBATCH --time=7-00:00:00
@@ -19,6 +19,8 @@ module load tqdm/4.66.1-GCCcore-12.3.0
 # module load torchvision/0.16.0-foss-2023a-CUDA-12.1.1
 # module load bear-apps/2022a
 # module load wandb/0.13.6-GCC-11.3.0
+
+GAME_NAME=Asteroids
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -79,10 +81,46 @@ seeds=(118398 919409 711872 442081 189061)
 SEED=${seeds[$SLURM_ARRAY_TASK_ID]}
 
 echo "Starting task with seed $SEED at $(date)"
-python dqn_torchrl.py -m \
-    env.env_name=${GAME_NAME:-Asteroids} \
-    env.seed=$SEED \
-    run_name=DQN_${GAME_NAME:-Asteroids}_$SEED \
+
+VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
+
+# Execute based on the selected variant
+if [ "$VARIANT" == "BPER" ]; then
+    python dqn_torchl.py -m \
+        env.seed=$SEED \
+        env.env_name=$GAME_NAME \
+        loss.mico_loss.enable=True \
+        buffer.prioritized_replay.enable=True \
+        buffer.prioritized_replay.priority_type=BPERcn \
+        run_name=DQN_MICO_BPER_${GAME_NAME}_$SEED
+
+elif [ "$VARIANT" == "PER" ]; then
+    python dqn_torchl.py -m \
+        env.seed=$SEED \
+        env.env_name=$GAME_NAME \
+        loss.mico_loss.enable=True \
+        buffer.prioritized_replay.enable=True \
+        buffer.prioritized_replay.priority_type=PER \
+        run_name=DQN_MICO_PER_${GAME_NAME}_$SEED
+
+elif [ "$VARIANT" == "MICO" ]; then
+    python dqn_torchl.py -m \
+        env.seed=$SEED \
+        env.env_name=$GAME_NAME \
+        loss.mico_loss.enable=True \
+        run_name=DQN_MICO_${GAME_NAME}_$SEED
+
+elif [ "$VARIANT" == "DQN" ]; then
+    python dqn_torchrl.py -m \
+        env.env_name=$GAME_NAME \
+        env.seed=$SEED \
+        run_name=DQN_${GAME_NAME}_$SEED
+
+else
+    echo "Unknown variant: $VARIANT"
+    exit 1
+fi
+
 
 echo "Completed task with seed $SEED at $(date)"
 
