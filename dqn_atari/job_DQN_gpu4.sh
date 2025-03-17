@@ -5,10 +5,21 @@
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
-#SBATCH --cpus-per-task=18
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=24
+#SBATCH --mem=16G
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
 #SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
+
+module purge; module load bluebear
+module load bear-apps/2023a
+module load Python/3.11.3-GCCcore-12.3.0
+module load tqdm/4.66.1-GCCcore-12.3.0
+# module load PyTorch/2.1.2-foss-2023a-CUDA-12.1.1
+# module load torchvision/0.16.0-foss-2023a-CUDA-12.1.1
+module load bear-apps/2022a
+module load wandb/0.13.6-GCC-11.3.0
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -30,14 +41,7 @@ export WANDB_API_KEY=$1
 set -x  # Enable debug mode
 set -e
 
-module purge; module load bluebear
-module load bear-apps/2023a
-module load Python/3.11.3-GCCcore-12.3.0
-module load tqdm/4.66.1-GCCcore-12.3.0
-# module load PyTorch/2.1.2-foss-2023a-CUDA-12.1.1
-# module load torchvision/0.16.0-foss-2023a-CUDA-12.1.1
-module load bear-apps/2022a
-module load wandb/0.13.6-GCC-11.3.0
+
 
 # pip install torch==2.3.1 torchvision==0.18.1
 
