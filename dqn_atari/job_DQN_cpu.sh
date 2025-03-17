@@ -72,14 +72,48 @@ seeds=(118398 919409 711872 442081 189061)
 SEED=${seeds[$SLURM_ARRAY_TASK_ID]}
 
 echo "Starting task with seed $SEED at $(date)"
-python dqn_torchl.py -m \
-    env.seed=$SEED \
-    env.env_name=${GAME_NAME:-Asteroids} \
-    loss.mico_loss.enable=True \
-    buffer.prioritized_replay.enable=True \
-    buffer.prioritized_replay.priority_type=PER \
-    run_name=DQN_MICO_PER_${GAME_NAME:-Asteroids}_$SEED \
-    running_setup.enable_lazy_tensor_buffer=True
+VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
+
+# Execute based on the selected variant
+if [ "$VARIANT" == "BPER" ]; then
+    python dqn_torchl.py -m \
+        env.seed=$SEED \
+        env.env_name=$GAME_NAME \
+        loss.mico_loss.enable=True \
+        buffer.prioritized_replay.enable=True \
+        buffer.prioritized_replay.priority_type=BPERcn \
+        run_name=DQN_MICO_BPER_${GAME_NAME}_$SEED \
+        running_setup.enable_lazy_tensor_buffer=True
+
+elif [ "$VARIANT" == "PER" ]; then
+    python dqn_torchl.py -m \
+        env.seed=$SEED \
+        env.env_name=$GAME_NAME \
+        loss.mico_loss.enable=True \
+        buffer.prioritized_replay.enable=True \
+        buffer.prioritized_replay.priority_type=PER \
+        run_name=DQN_MICO_PER_${GAME_NAME}_$SEED \
+        running_setup.enable_lazy_tensor_buffer=True
+
+elif [ "$VARIANT" == "MICO" ]; then
+    python dqn_torchl.py -m \
+        env.seed=$SEED \
+        env.env_name=$GAME_NAME \
+        loss.mico_loss.enable=True \
+        run_name=DQN_MICO_${GAME_NAME}_$SEED \
+        running_setup.enable_lazy_tensor_buffer=True
+
+elif [ "$VARIANT" == "DQN" ]; then
+    python dqn_torchrl.py -m \
+        env.env_name=$GAME_NAME \
+        env.seed=$SEED \
+        run_name=DQN_${GAME_NAME}_$SEED \
+        running_setup.enable_lazy_tensor_buffer=True
+
+else
+    echo "Unknown variant: $VARIANT"
+    exit 1
+fi
     
 echo "Completed task with seed $SEED at $(date)"
 
