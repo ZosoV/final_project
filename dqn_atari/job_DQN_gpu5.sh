@@ -17,7 +17,7 @@ module load Python/3.11.3-GCCcore-12.3.0
 module load tqdm/4.66.1-GCCcore-12.3.0
 # module load PyTorch/2.1.2-foss-2023a-CUDA-12.1.1
 # module load torchvision/0.16.0-foss-2023a-CUDA-12.1.1
-module load bear-apps/2022a
+# module load bear-apps/2022a
 # module load wandb/0.13.6-GCC-11.3.0
 
 # Temporary scratch space for I/O efficiency

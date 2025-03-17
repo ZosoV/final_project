@@ -32,7 +32,7 @@ module purge; module load bluebear
 module load bear-apps/2023a
 module load Python/3.11.3-GCCcore-12.3.0
 module load tqdm/4.66.1-GCCcore-12.3.0
-module load bear-apps/2022a
+# module load bear-apps/2022a
 # module load wandb/0.13.6-GCC-11.3.0
 
 PROJECT_DIR="/rds/projects/g/giacobbm-bisimulation-rl"
