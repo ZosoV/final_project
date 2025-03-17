@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=bisimulation-rl-DQN_Hero
+#SBATCH --job-name=bisimulation-rl-DQN_Alien
 #SBATCH --array=0
 #SBATCH --ntasks=1
 #SBATCH --time=10-00:00:00
@@ -11,7 +11,7 @@
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
 #SBATCH --constraint=sapphire
 
-GAME_NAME=Hero
+GAME_NAME=Alien
 
 # Check if an argument is provided
 if [ -z "$1" ]; then
