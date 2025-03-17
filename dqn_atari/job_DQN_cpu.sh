@@ -72,14 +72,13 @@ seeds=(118398 919409 711872 442081 189061)
 SEED=${seeds[$SLURM_ARRAY_TASK_ID]}
 
 echo "Starting task with seed $SEED at $(date)"
-python dqn_torchrl.py -m \
-    device=cpu \
-    env.env_name=${GAME_NAME:-Asteroids} \
+python dqn_torchl.py -m \
     env.seed=$SEED \
-    run_name=DQN_${GAME_NAME:-Asteroids}_$SEED \
-    running_setup.num_envs=8 \
-    running_setup.prefetch=16 \
+    env.env_name=${GAME_NAME:-Asteroids} \
+    loss.mico_loss.enable=True \
+    run_name=DQN_MICO_${GAME_NAME:-Asteroids}_$SEED \
     running_setup.enable_lazy_tensor_buffer=True
+    
 echo "Completed task with seed $SEED at $(date)"
 
 echo "Exiting."

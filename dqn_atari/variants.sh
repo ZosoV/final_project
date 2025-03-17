@@ -1,5 +1,5 @@
 #BPER
-python dqn_cpu.py -m \
+python dqn_torchl.py -m \
     env.seed=$SEED \
     env.env_name=${GAME_NAME:-Asteroids} \
     loss.mico_loss.enable=True \
@@ -8,7 +8,7 @@ python dqn_cpu.py -m \
     run_name=DQN_MICO_BPER_${GAME_NAME:-Asteroids}_$SEED 
 
 #PER
-python dqn.py -m \
+python dqn_torchl.py -m \
     env.seed=$SEED \
     env.env_name=${GAME_NAME:-Asteroids} \
     loss.mico_loss.enable=True \
@@ -17,7 +17,7 @@ python dqn.py -m \
     run_name=DQN_MICO_PER_${GAME_NAME:-Asteroids}_$SEED 
 
 #MICO
-python dqn.py -m \
+python dqn_torchl.py -m \
     env.seed=$SEED \
     env.env_name=${GAME_NAME:-Asteroids} \
     loss.mico_loss.enable=True \
