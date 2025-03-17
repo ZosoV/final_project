@@ -76,7 +76,7 @@ VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
 
 # Execute based on the selected variant
 if [ "$VARIANT" == "BPER" ]; then
-    python dqn_torchl.py -m \
+    python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         loss.mico_loss.enable=True \
@@ -86,7 +86,7 @@ if [ "$VARIANT" == "BPER" ]; then
         running_setup.enable_lazy_tensor_buffer=True
 
 elif [ "$VARIANT" == "PER" ]; then
-    python dqn_torchl.py -m \
+    python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         loss.mico_loss.enable=True \
@@ -96,7 +96,7 @@ elif [ "$VARIANT" == "PER" ]; then
         running_setup.enable_lazy_tensor_buffer=True
 
 elif [ "$VARIANT" == "MICO" ]; then
-    python dqn_torchl.py -m \
+    python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         loss.mico_loss.enable=True \
