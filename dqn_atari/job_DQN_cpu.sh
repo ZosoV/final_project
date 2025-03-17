@@ -5,9 +5,9 @@
 #SBATCH --time=10-00:00:00
 #SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
-#SBATCH --cpus-per-task=36
+#SBATCH --cpus-per-task=54
 #SBATCH --nodes=1
-#SBATCH --mem=366G
+#SBATCH --mem-per-cpu=6GB
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
 #SBATCH --constraint=sapphire
 
