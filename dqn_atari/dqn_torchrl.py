@@ -130,7 +130,8 @@ def main(cfg: "DictConfig"):
         project=cfg.project_name, 
         group=cfg.group_name, 
         mode=cfg.logger.mode, 
-        config=hyperparameters  # Pass the entire config for hyperparameter tracking
+        config=hyperparameters,  # Pass the entire config for hyperparameter tracking
+        dir=f"./wandb/{cfg.run_name}"
     )
 
     device = cfg.device

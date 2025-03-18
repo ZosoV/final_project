@@ -8,17 +8,17 @@ SEED=${seeds[$SLURM_ARRAY_TASK_ID]}
 ITERATIONS=25
 
 
-python dqn_torchrl.py -m \
-    env.env_name=$GAME_NAME \
-    env.seed=$SEED \
-    run_name=DQN_${GAME_NAME}_$SEED \
-    collector.num_iterations=$ITERATIONS
+# python dqn_torchrl.py -m \
+#     env.env_name=$GAME_NAME \
+#     env.seed=$SEED \
+#     run_name=DQN_${GAME_NAME}_$SEED \
+#     collector.num_iterations=$ITERATIONS
 
-echo "Sleeping for 5 minutes..."
-sleep 300  # 5-minute buffer
+# echo "Sleeping for 5 minutes..."
+# sleep 300  # 5-minute buffer
 
 # Execute based on the selected variant
-python dqn_torchl.py -m \
+python dqn_torchrl.py -m \
     env.seed=$SEED \
     env.env_name=$GAME_NAME \
     loss.mico_loss.enable=True \
@@ -28,9 +28,9 @@ python dqn_torchl.py -m \
     collector.num_iterations=$ITERATIONS
 
 echo "Sleeping for 5 minutes..."
-sleep 300  # 5-minute buffer
+sleep 600  # 5-minute buffer
 
-python dqn_torchl.py -m \
+python dqn_torchrl.py -m \
     env.seed=$SEED \
     env.env_name=$GAME_NAME \
     loss.mico_loss.enable=True \
@@ -40,13 +40,13 @@ python dqn_torchl.py -m \
     collector.num_iterations=$ITERATIONS
 
 echo "Sleeping for 5 minutes..."
-sleep 300  # 5-minute buffer
+# sleep 300  # 5-minute buffer
 
-python dqn_torchl.py -m \
-    env.seed=$SEED \
-    env.env_name=$GAME_NAME \
-    loss.mico_loss.enable=True \
-    run_name=DQN_MICO_${GAME_NAME}_$SEED \
-    collector.num_iterations=$ITERATIONS
+# python dqn_torchrl.py -m \
+#     env.seed=$SEED \
+#     env.env_name=$GAME_NAME \
+#     loss.mico_loss.enable=True \
+#     run_name=DQN_MICO_${GAME_NAME}_$SEED \
+#     collector.num_iterations=$ITERATIONS
 
 
