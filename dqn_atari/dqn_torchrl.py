@@ -333,7 +333,7 @@ def main(cfg: "DictConfig"):
         torch.set_num_threads(cfg.running_setup.num_threads)  
         print(f"Threads after setting manually: {torch.get_num_threads()}")
 
-    print("Inital PyTorch Threads: ", torch.get_num_threads())
+    print("Initial PyTorch Threads: ", torch.get_num_threads())
     for iteration in range(start_iteration, cfg.collector.num_iterations + start_iteration):
 
         sum_return = 0
