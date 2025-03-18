@@ -1,19 +1,19 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN_Alien
-#SBATCH --array=2
+#SBATCH --array=1
 #SBATCH --ntasks=1
 #SBATCH --time=10-00:00:00
 #SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=24
+#SBATCH --cpus-per-task=32
 #SBATCH --mem-per-cpu=8GB
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
 #SBATCH --constraint=sapphire
 
 GAME_NAME=Alien
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=8
+CUSTOM_THREADS=16
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -97,7 +97,8 @@ if [ "$VARIANT" == "BPER" ]; then
         loss.mico_loss.enable=True \
         buffer.prioritized_replay.enable=True \
         buffer.prioritized_replay.priority_type=BPERcn \
-        run_name=DQN_MICO_BPER_${GAME_NAME}_$SEED #\
+        run_name=DQN_MICO_BPER_${GAME_NAME}_$SEED \
+        running_setup.num_threads=$CUSTOM_THREADS #\
         # running_setup.enable_lazy_tensor_buffer=True
 
     wandb sync outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
@@ -109,7 +110,8 @@ elif [ "$VARIANT" == "PER" ]; then
         loss.mico_loss.enable=True \
         buffer.prioritized_replay.enable=True \
         buffer.prioritized_replay.priority_type=PER \
-        run_name=DQN_MICO_PER_${GAME_NAME}_$SEED #\
+        run_name=DQN_MICO_PER_${GAME_NAME}_$SEED \
+        running_setup.num_threads=$CUSTOM_THREADS #\
         # running_setup.enable_lazy_tensor_buffer=True
 
     wandb sync outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
@@ -119,7 +121,8 @@ elif [ "$VARIANT" == "MICO" ]; then
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         loss.mico_loss.enable=True \
-        run_name=DQN_MICO_${GAME_NAME}_$SEED #\
+        run_name=DQN_MICO_${GAME_NAME}_$SEED \
+        running_setup.num_threads=$CUSTOM_THREADS #\
         # running_setup.enable_lazy_tensor_buffer=True
 
     wandb sync outputs/DQN_MICO_${GAME_NAME}_$SEED
