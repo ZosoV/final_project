@@ -120,7 +120,7 @@ elif [ "$VARIANT" == "DQN" ]; then
         env.env_name=$GAME_NAME \
         env.seed=$SEED \
         run_name=DQN_${GAME_NAME}_$SEED \
-        running_setup.num_threads=24 #\
+        running_setup.num_threads=4 #\
         # running_setup.enable_lazy_tensor_buffer=True
 
     wandb sync outputs/DQN_${GAME_NAME}_$SEED
