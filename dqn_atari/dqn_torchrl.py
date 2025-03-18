@@ -233,13 +233,13 @@ def main(cfg: "DictConfig"):
     if cfg.running_setup.enable_lazy_tensor_buffer:
         storage = LazyTensorStorage(
             max_size=cfg.buffer.buffer_size,
-            device=device  # Important: Ensures data is stored directly in RAM
+            # device=device  # Important: Ensures data is stored directly in RAM
         )
     else:
         storage = LazyMemmapStorage( # NOTE: additional line
                 max_size=cfg.buffer.buffer_size,
                 scratch_dir=scratch_dir,
-                device = device_steps
+                # device = device_steps
             )
 
     replay_buffer = TensorDictReplayBuffer(
