@@ -313,12 +313,12 @@ def main(cfg: "DictConfig"):
         total_episodes = checkpoint['total_episodes']
 
         # Restore replay buffer if applicable
-        if 'replay_buffer' in checkpoint:
-            replay_buffer.load_state_dict(checkpoint['replay_buffer'])
+        # if 'replay_buffer' in checkpoint:
+        #     replay_buffer.load_state_dict(checkpoint['replay_buffer'])
 
-        # # Restore exploration module
-        if 'greedy_module_state_dict' in checkpoint:
-            greedy_module.load_state_dict(checkpoint['greedy_module_state_dict'])
+        # # # Restore exploration module
+        # if 'greedy_module_state_dict' in checkpoint:
+        #     greedy_module.load_state_dict(checkpoint['greedy_module_state_dict'])
 
 
     start_time = time.time()
@@ -486,8 +486,8 @@ def main(cfg: "DictConfig"):
                         'iteration': iteration,
                         'steps_so_far': steps_so_far,
                         'total_episodes': total_episodes,
-                        'replay_buffer': replay_buffer.state_dict(),  # Save replay buffer state if supported
-                        'greedy_module_state_dict': greedy_module.state_dict(),
+                        # 'replay_buffer': replay_buffer.state_dict(),  # Save replay buffer state if supported
+                        # 'greedy_module_state_dict': greedy_module.state_dict(),
                     }
                     torch.save(checkpoint, f"{path}/{cfg.run_name}_checkpoint_{iteration}.pth")
 
