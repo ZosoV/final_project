@@ -21,6 +21,8 @@ module load tqdm/4.66.1-GCCcore-12.3.0
 # module load wandb/0.13.6-GCC-11.3.0
 
 GAME_NAME=Asteroids
+VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
+CUSTOM_THREADS=8
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -82,7 +84,13 @@ SEED=${seeds[$SLURM_ARRAY_TASK_ID]}
 
 echo "Starting task with seed $SEED at $(date)"
 
-VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
+# Print current OMP_NUM_THREADS and MKL_NUM_THREADS
+echo "OMP_NUM_THREADS=$OMP_NUM_THREADS"
+echo "MKL_NUM_THREADS=$MKL_NUM_THREADS"
+
+# Set the number of threads for MKL and OMP
+export OMP_NUM_THREADS=$CUSTOM_THREADS
+export MKL_NUM_THREADS=$CUSTOM_THREADS
 
 # Execute based on the selected variant
 if [ "$VARIANT" == "BPER" ]; then
@@ -92,7 +100,8 @@ if [ "$VARIANT" == "BPER" ]; then
         loss.mico_loss.enable=True \
         buffer.prioritized_replay.enable=True \
         buffer.prioritized_replay.priority_type=BPERcn \
-        run_name=DQN_MICO_BPER_${GAME_NAME}_$SEED
+        run_name=DQN_MICO_BPER_${GAME_NAME}_$SEED \
+        running_setup.num_threads=$CUSTOM_THREADS
 
     wandb sync outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
 
@@ -103,7 +112,8 @@ elif [ "$VARIANT" == "PER" ]; then
         loss.mico_loss.enable=True \
         buffer.prioritized_replay.enable=True \
         buffer.prioritized_replay.priority_type=PER \
-        run_name=DQN_MICO_PER_${GAME_NAME}_$SEED
+        run_name=DQN_MICO_PER_${GAME_NAME}_$SEED \
+        running_setup.num_threads=$CUSTOM_THREADS
 
     wandb sync outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
 
@@ -112,7 +122,8 @@ elif [ "$VARIANT" == "MICO" ]; then
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         loss.mico_loss.enable=True \
-        run_name=DQN_MICO_${GAME_NAME}_$SEED
+        run_name=DQN_MICO_${GAME_NAME}_$SEED \
+        running_setup.num_threads=$CUSTOM_THREADS
     
     wandb sync outputs/DQN_MICO_${GAME_NAME}_$SEED
 
@@ -120,7 +131,8 @@ elif [ "$VARIANT" == "DQN" ]; then
     python dqn_torchrl.py -m \
         env.env_name=$GAME_NAME \
         env.seed=$SEED \
-        run_name=DQN_${GAME_NAME}_$SEED
+        run_name=DQN_${GAME_NAME}_$SEED \
+        running_setup.num_threads=$CUSTOM_THREADS
 
     wandb sync outputs/DQN_${GAME_NAME}_$SEED
 

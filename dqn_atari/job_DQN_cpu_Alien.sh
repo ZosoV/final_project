@@ -12,17 +12,8 @@
 #SBATCH --constraint=sapphire
 
 GAME_NAME=Alien
-
+VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
 CUSTOM_THREADS=8
-
-# Print current OMP_NUM_THREADS and MKL_NUM_THREADS
-echo "OMP_NUM_THREADS=$OMP_NUM_THREADS"
-echo "MKL_NUM_THREADS=$MKL_NUM_THREADS"
-
-# Set the number of threads for MKL and OMP
-export OMP_NUM_THREADS=$CUSTOM_THREADS
-export MKL_NUM_THREADS=$CUSTOM_THREADS
-
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -89,7 +80,14 @@ seeds=(118398 919409 711872 442081 189061)
 SEED=${seeds[$SLURM_ARRAY_TASK_ID]}
 
 echo "Starting task with seed $SEED at $(date)"
-VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
+
+# Print current OMP_NUM_THREADS and MKL_NUM_THREADS
+echo "OMP_NUM_THREADS=$OMP_NUM_THREADS"
+echo "MKL_NUM_THREADS=$MKL_NUM_THREADS"
+
+# Set the number of threads for MKL and OMP
+export OMP_NUM_THREADS=$CUSTOM_THREADS
+export MKL_NUM_THREADS=$CUSTOM_THREADS
 
 # Execute based on the selected variant
 if [ "$VARIANT" == "BPER" ]; then
