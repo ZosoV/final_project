@@ -5,13 +5,19 @@
 #SBATCH --time=10-00:00:00
 #SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
-#SBATCH --cpus-per-task=36
+#SBATCH --cpus-per-task=28
 #SBATCH --nodes=1
-#SBATCH --mem=366G
+#SBATCH --mem-per-cpu=8GB
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
 #SBATCH --constraint=sapphire
 
 GAME_NAME=Alien
+
+# Temporary scratch space for I/O efficiency
+BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
+# BB_WORKDIR=$(mktemp -d /rds/projects/g/giacobbm-bisimulation-rl/${USER}_${SLURM_JOBID}.XXXXXX)
+export TMPDIR=${BB_WORKDIR}
+# export EXP_BUFF=${BB_WORKDIR}
 
 # Check if an argument is provided
 if [ -z "$1" ]; then
@@ -82,8 +88,10 @@ if [ "$VARIANT" == "BPER" ]; then
         loss.mico_loss.enable=True \
         buffer.prioritized_replay.enable=True \
         buffer.prioritized_replay.priority_type=BPERcn \
-        run_name=DQN_MICO_BPER_${GAME_NAME}_$SEED \
-        running_setup.enable_lazy_tensor_buffer=True
+        run_name=DQN_MICO_BPER_${GAME_NAME}_$SEED #\
+        # running_setup.enable_lazy_tensor_buffer=True
+
+    wandb sync ./wandb/DQN_MICO_BPER_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "PER" ]; then
     python dqn_torchrl.py -m \
@@ -92,29 +100,40 @@ elif [ "$VARIANT" == "PER" ]; then
         loss.mico_loss.enable=True \
         buffer.prioritized_replay.enable=True \
         buffer.prioritized_replay.priority_type=PER \
-        run_name=DQN_MICO_PER_${GAME_NAME}_$SEED \
-        running_setup.enable_lazy_tensor_buffer=True
+        run_name=DQN_MICO_PER_${GAME_NAME}_$SEED #\
+        # running_setup.enable_lazy_tensor_buffer=True
 
+    wandb sync ./wandb/DQN_MICO_PER_${GAME_NAME}_$SEED
+        
 elif [ "$VARIANT" == "MICO" ]; then
     python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         loss.mico_loss.enable=True \
-        run_name=DQN_MICO_${GAME_NAME}_$SEED \
-        running_setup.enable_lazy_tensor_buffer=True
+        run_name=DQN_MICO_${GAME_NAME}_$SEED #\
+        # running_setup.enable_lazy_tensor_buffer=True
+
+    wandb sync ./wandb/DQN_MICO_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "DQN" ]; then
     python dqn_torchrl.py -m \
         env.env_name=$GAME_NAME \
         env.seed=$SEED \
-        run_name=DQN_${GAME_NAME}_$SEED \
-        running_setup.enable_lazy_tensor_buffer=True
+        run_name=DQN_${GAME_NAME}_$SEED # \
+        # running_setup.enable_lazy_tensor_buffer=True
+
+    wandb sync ./wandb/DQN_${GAME_NAME}_$SEED
 
 else
     echo "Unknown variant: $VARIANT"
     exit 1
 fi
-    
+
+# Cleanup
+# sleep 300  # 5-minute buffer
+# test -d ${BB_WORKDIR}/wandb/ && /bin/cp -r ${BB_WORKDIR}/wandb/ ./outputs/wandb/
+test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}
+
 echo "Completed task with seed $SEED at $(date)"
 
 echo "Exiting."
