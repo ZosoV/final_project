@@ -13,6 +13,17 @@
 
 GAME_NAME=Alien
 
+CUSTOM_THREADS=8
+
+# Print current OMP_NUM_THREADS and MKL_NUM_THREADS
+echo "OMP_NUM_THREADS=$OMP_NUM_THREADS"
+echo "MKL_NUM_THREADS=$MKL_NUM_THREADS"
+
+# Set the number of threads for MKL and OMP
+export OMP_NUM_THREADS=$CUSTOM_THREADS
+export MKL_NUM_THREADS=$CUSTOM_THREADS
+
+
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
 # BB_WORKDIR=$(mktemp -d /rds/projects/g/giacobbm-bisimulation-rl/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -120,7 +131,7 @@ elif [ "$VARIANT" == "DQN" ]; then
         env.env_name=$GAME_NAME \
         env.seed=$SEED \
         run_name=DQN_${GAME_NAME}_$SEED \
-        running_setup.num_threads=4 #\
+        running_setup.num_threads=$CUSTOM_THREADS #\
         # running_setup.enable_lazy_tensor_buffer=True
 
     wandb sync outputs/DQN_${GAME_NAME}_$SEED
