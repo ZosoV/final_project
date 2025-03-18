@@ -328,9 +328,11 @@ def main(cfg: "DictConfig"):
     start_time = time.time()
     c_iter = iter(collector)
 
-    for iteration in range(start_iteration, cfg.collector.num_iterations + start_iteration):
+    # Set thread before the loop start:
+    torch.set_num_threads(cfg.running_setup.num_threads)  
+    print(f"Threads after setting manually: {torch.get_num_threads()}")
 
-        print(f"Initial PyTorch Threads: {torch.get_num_threads()}")
+    for iteration in range(start_iteration, cfg.collector.num_iterations + start_iteration):
 
         sum_return = 0
         number_of_episodes = 0
@@ -348,6 +350,7 @@ def main(cfg: "DictConfig"):
         training_start = time.time()
                 
         for i in range(steps_in_batch):
+            print(f"Initial PyTorch Threads: {torch.get_num_threads()}")
             data = next(c_iter)
         
             data_iter.update(data.numel())
