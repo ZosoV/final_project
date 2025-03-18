@@ -115,4 +115,4 @@ running_setup:
   prefetch: 16 # 32 for cpu (or more)
   enable_lazy_tensor_buffer : False # True for cpu
   device_steps: "cpu"
-  num_threads: 4 # set to 1 for cpu
+  num_threads: null # set to 1 for cpu

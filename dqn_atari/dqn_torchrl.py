@@ -329,8 +329,9 @@ def main(cfg: "DictConfig"):
     c_iter = iter(collector)
 
     # Set thread before the loop start:
-    torch.set_num_threads(cfg.running_setup.num_threads)  
-    print(f"Threads after setting manually: {torch.get_num_threads()}")
+    if cfg.running_setup.num_threads is not None:
+        torch.set_num_threads(cfg.running_setup.num_threads)  
+        print(f"Threads after setting manually: {torch.get_num_threads()}")
 
     for iteration in range(start_iteration, cfg.collector.num_iterations + start_iteration):
 
