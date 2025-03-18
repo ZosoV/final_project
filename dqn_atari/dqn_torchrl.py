@@ -330,6 +330,8 @@ def main(cfg: "DictConfig"):
 
     for iteration in range(start_iteration, cfg.collector.num_iterations + start_iteration):
 
+        print(f"Initial PyTorch Threads: {torch.get_num_threads()}")
+
         sum_return = 0
         number_of_episodes = 0
         num_steps = 0
