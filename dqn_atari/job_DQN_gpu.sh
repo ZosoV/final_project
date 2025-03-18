@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=bisimulation-rl-DQN-Frostbite
+#SBATCH --job-name=bisimulation-rl-DQN-Asteroids
 #SBATCH --array=1
 #SBATCH --ntasks=1
 #SBATCH --time=7-00:00:00
@@ -20,7 +20,7 @@ module load tqdm/4.66.1-GCCcore-12.3.0
 # module load bear-apps/2022a
 # module load wandb/0.13.6-GCC-11.3.0
 
-GAME_NAME=Frostbite
+GAME_NAME=Asteroids
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -86,7 +86,7 @@ VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
 
 # Execute based on the selected variant
 if [ "$VARIANT" == "BPER" ]; then
-    python dqn_torchl.py -m \
+    python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         loss.mico_loss.enable=True \
@@ -95,8 +95,10 @@ if [ "$VARIANT" == "BPER" ]; then
         run_name=DQN_MICO_BPER_${GAME_NAME}_$SEED \
         running_setup.enable_lazy_tensor_buffer=True
 
+    wandb sync outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
+
 elif [ "$VARIANT" == "PER" ]; then
-    python dqn_torchl.py -m \
+    python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         loss.mico_loss.enable=True \
@@ -105,13 +107,17 @@ elif [ "$VARIANT" == "PER" ]; then
         run_name=DQN_MICO_PER_${GAME_NAME}_$SEED \
         running_setup.enable_lazy_tensor_buffer=True
 
+    wandb sync outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
+
 elif [ "$VARIANT" == "MICO" ]; then
-    python dqn_torchl.py -m \
+    python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         loss.mico_loss.enable=True \
         run_name=DQN_MICO_${GAME_NAME}_$SEED \
         running_setup.enable_lazy_tensor_buffer=True
+    
+    wandb sync outputs/DQN_MICO_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "DQN" ]; then
     python dqn_torchrl.py -m \
@@ -120,10 +126,13 @@ elif [ "$VARIANT" == "DQN" ]; then
         run_name=DQN_${GAME_NAME}_$SEED \
         running_setup.enable_lazy_tensor_buffer=True
 
+    wandb sync outputs/DQN_${GAME_NAME}_$SEED
+
 else
     echo "Unknown variant: $VARIANT"
     exit 1
 fi
+
 
 
 echo "Completed task with seed $SEED at $(date)"

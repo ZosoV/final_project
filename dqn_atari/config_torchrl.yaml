@@ -58,13 +58,13 @@ env:
 # update_period of 4 steps
 
 collector:
-  num_iterations: 201 # 201
-  training_steps: 250_000 # 250_000 # agent steps
+  num_iterations: 1 # 201
+  training_steps: 20_000 # 250_000 # agent steps
   frames_per_batch: 400 # update_period in Dopamine # agent steps # BO
   epsilon_start: 1.0
   epsilon_end: 0.01
   epsilon_decay_period: 250_000 # TODO: decay has to init after warmup # agent steps
-  warmup_steps: 20_000 # 20_004 # min_replay_history in Dopamine # agent steps
+  warmup_steps: 1_000 # 20_004 # min_replay_history in Dopamine # agent steps
   frame_stack: 4
 
 # policy

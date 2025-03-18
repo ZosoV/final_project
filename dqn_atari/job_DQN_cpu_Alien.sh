@@ -91,7 +91,7 @@ if [ "$VARIANT" == "BPER" ]; then
         run_name=DQN_MICO_BPER_${GAME_NAME}_$SEED #\
         # running_setup.enable_lazy_tensor_buffer=True
 
-    wandb sync ./wandb/DQN_MICO_BPER_${GAME_NAME}_$SEED
+    wandb sync outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "PER" ]; then
     python dqn_torchrl.py -m \
@@ -103,7 +103,7 @@ elif [ "$VARIANT" == "PER" ]; then
         run_name=DQN_MICO_PER_${GAME_NAME}_$SEED #\
         # running_setup.enable_lazy_tensor_buffer=True
 
-    wandb sync ./wandb/DQN_MICO_PER_${GAME_NAME}_$SEED
+    wandb sync outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
         
 elif [ "$VARIANT" == "MICO" ]; then
     python dqn_torchrl.py -m \
@@ -113,7 +113,7 @@ elif [ "$VARIANT" == "MICO" ]; then
         run_name=DQN_MICO_${GAME_NAME}_$SEED #\
         # running_setup.enable_lazy_tensor_buffer=True
 
-    wandb sync ./wandb/DQN_MICO_${GAME_NAME}_$SEED
+    wandb sync outputs/DQN_MICO_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "DQN" ]; then
     python dqn_torchrl.py -m \
@@ -122,7 +122,7 @@ elif [ "$VARIANT" == "DQN" ]; then
         run_name=DQN_${GAME_NAME}_$SEED # \
         # running_setup.enable_lazy_tensor_buffer=True
 
-    wandb sync ./wandb/DQN_${GAME_NAME}_$SEED
+    wandb sync outputs/DQN_${GAME_NAME}_$SEED
 
 else
     echo "Unknown variant: $VARIANT"

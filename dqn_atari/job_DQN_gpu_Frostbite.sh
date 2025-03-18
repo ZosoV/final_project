@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=28
 #SBATCH --mem-per-cpu=8GB
 ##SBATCH --account=giacobbm-bisimulation-rl
-#SBATCH --gres=gpu:a100:1
+#SBATCH --gres=gpu:a30:1
 #SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
 
 module purge; module load bluebear
@@ -94,7 +94,7 @@ if [ "$VARIANT" == "BPER" ]; then
         buffer.prioritized_replay.priority_type=BPERcn \
         run_name=DQN_MICO_BPER_${GAME_NAME}_$SEED
 
-    wandb sync ./wandb/DQN_MICO_BPER_${GAME_NAME}_$SEED
+    wandb sync outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "PER" ]; then
     python dqn_torchrl.py -m \
@@ -105,7 +105,7 @@ elif [ "$VARIANT" == "PER" ]; then
         buffer.prioritized_replay.priority_type=PER \
         run_name=DQN_MICO_PER_${GAME_NAME}_$SEED
 
-    wandb sync ./wandb/DQN_MICO_PER_${GAME_NAME}_$SEED
+    wandb sync outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "MICO" ]; then
     python dqn_torchrl.py -m \
@@ -114,7 +114,7 @@ elif [ "$VARIANT" == "MICO" ]; then
         loss.mico_loss.enable=True \
         run_name=DQN_MICO_${GAME_NAME}_$SEED
     
-    wandb sync ./wandb/DQN_MICO_${GAME_NAME}_$SEED
+    wandb sync outputs/DQN_MICO_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "DQN" ]; then
     python dqn_torchrl.py -m \
@@ -122,7 +122,7 @@ elif [ "$VARIANT" == "DQN" ]; then
         env.seed=$SEED \
         run_name=DQN_${GAME_NAME}_$SEED
 
-    wandb sync ./wandb/DQN_${GAME_NAME}_$SEED
+    wandb sync outputs/DQN_${GAME_NAME}_$SEED
 
 else
     echo "Unknown variant: $VARIANT"

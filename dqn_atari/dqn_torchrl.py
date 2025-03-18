@@ -125,13 +125,17 @@ def main(cfg: "DictConfig"):
         "hydra_cfg" : dict(cfg)
     }
 
+    # Create path to save logs
+    logs_path = f"outputs/{cfg.run_name}"
+    os.makedirs(logs_path, exist_ok=True)
+
     wandb.init(
         name=run_name,
         project=cfg.project_name, 
         group=cfg.group_name, 
         mode=cfg.logger.mode, 
         config=hyperparameters,  # Pass the entire config for hyperparameter tracking
-        dir=f"./wandb/{cfg.run_name}"
+        dir=logs_path
     )
 
     device = cfg.device
