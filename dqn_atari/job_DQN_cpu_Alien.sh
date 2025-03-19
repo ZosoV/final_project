@@ -1,19 +1,19 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN_Alien
-#SBATCH --array=1
+#SBATCH --array=3
 #SBATCH --ntasks=1
 #SBATCH --time=10-00:00:00
 #SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=24
+#SBATCH --cpus-per-task=32
 #SBATCH --mem-per-cpu=8GB
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
 #SBATCH --constraint=sapphire
 
 GAME_NAME=Alien
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=12
+CUSTOM_THREADS=24
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
