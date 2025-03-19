@@ -1,14 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=bisimulation-rl-DQN-Frostbite
+#SBATCH --job-name=bisimulation-rl-DQN-Asteroids
 #SBATCH --array=0
 #SBATCH --ntasks=1
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
-#SBATCH --cpus-per-task=28
-#SBATCH --mem-per-cpu=8GB
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=18
 ##SBATCH --account=giacobbm-bisimulation-rl
-#SBATCH --gres=gpu:a100_80:1
+#SBATCH --gres=gpu:a100:1
 #SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
 
 module purge; module load bluebear
@@ -20,7 +20,9 @@ module load tqdm/4.66.1-GCCcore-12.3.0
 # module load bear-apps/2022a
 # module load wandb/0.13.6-GCC-11.3.0
 
-GAME_NAME=Frostbite
+GAME_NAME=Asteroids
+VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
+CUSTOM_THREADS=9
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -82,48 +84,63 @@ SEED=${seeds[$SLURM_ARRAY_TASK_ID]}
 
 echo "Starting task with seed $SEED at $(date)"
 
-VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
+# Print current OMP_NUM_THREADS and MKL_NUM_THREADS
+echo "OMP_NUM_THREADS=$OMP_NUM_THREADS"
+echo "MKL_NUM_THREADS=$MKL_NUM_THREADS"
+
+# Set the number of threads for MKL and OMP
+export OMP_NUM_THREADS=$CUSTOM_THREADS
+export MKL_NUM_THREADS=$CUSTOM_THREADS
 
 # Execute based on the selected variant
 if [ "$VARIANT" == "BPER" ]; then
-    python dqn_torchl.py -m \
+    python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         loss.mico_loss.enable=True \
         buffer.prioritized_replay.enable=True \
         buffer.prioritized_replay.priority_type=BPERcn \
         run_name=DQN_MICO_BPER_${GAME_NAME}_$SEED \
-        running_setup.enable_lazy_tensor_buffer=True
+        running_setup.num_threads=$CUSTOM_THREADS
+
+    wandb sync outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "PER" ]; then
-    python dqn_torchl.py -m \
+    python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         loss.mico_loss.enable=True \
         buffer.prioritized_replay.enable=True \
         buffer.prioritized_replay.priority_type=PER \
         run_name=DQN_MICO_PER_${GAME_NAME}_$SEED \
-        running_setup.enable_lazy_tensor_buffer=True
+        running_setup.num_threads=$CUSTOM_THREADS
+
+    wandb sync outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "MICO" ]; then
-    python dqn_torchl.py -m \
+    python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         loss.mico_loss.enable=True \
         run_name=DQN_MICO_${GAME_NAME}_$SEED \
-        running_setup.enable_lazy_tensor_buffer=True
+        running_setup.num_threads=$CUSTOM_THREADS
+    
+    wandb sync outputs/DQN_MICO_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "DQN" ]; then
     python dqn_torchrl.py -m \
         env.env_name=$GAME_NAME \
         env.seed=$SEED \
         run_name=DQN_${GAME_NAME}_$SEED \
-        running_setup.enable_lazy_tensor_buffer=True
+        running_setup.num_threads=$CUSTOM_THREADS
+
+    wandb sync outputs/DQN_${GAME_NAME}_$SEED
 
 else
     echo "Unknown variant: $VARIANT"
     exit 1
 fi
+
 
 
 echo "Completed task with seed $SEED at $(date)"
