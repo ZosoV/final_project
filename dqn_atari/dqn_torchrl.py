@@ -330,6 +330,7 @@ def main(cfg: "DictConfig"):
 
     # Set thread before the loop start:
     if cfg.running_setup.num_threads is not None:
+        print(f"Threads before setting manually: {torch.get_num_threads()}")
         torch.set_num_threads(cfg.running_setup.num_threads)  
         print(f"Threads after setting manually: {torch.get_num_threads()}")
 
