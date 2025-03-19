@@ -32,7 +32,7 @@ ITERATIONS=25
 
 
 # sleep 300  # 5-minute buffer
-CUSTOM_THREADS=8
+CUSTOM_THREADS=12
 
 set -x  # Enable debug mode
 set -e  # Stop script on error

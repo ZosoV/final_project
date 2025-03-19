@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN_Alien
-#SBATCH --array=3
+#SBATCH --array=0
 #SBATCH --ntasks=1
 #SBATCH --time=10-00:00:00
 #SBATCH --qos=bbdefault
@@ -13,7 +13,7 @@
 
 GAME_NAME=Alien
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=24
+CUSTOM_THREADS=16
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -132,8 +132,8 @@ elif [ "$VARIANT" == "DQN" ]; then
         env.env_name=$GAME_NAME \
         env.seed=$SEED \
         run_name=DQN_${GAME_NAME}_$SEED \
-        running_setup.num_threads=$CUSTOM_THREADS #\
-        # running_setup.enable_lazy_tensor_buffer=True
+        running_setup.num_threads=$CUSTOM_THREADS \
+        running_setup.enable_lazy_tensor_buffer=True
 
     wandb sync outputs/DQN_${GAME_NAME}_$SEED
 
