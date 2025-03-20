@@ -133,8 +133,7 @@ elif [ "$VARIANT" == "DQN" ]; then
         env.env_name=$GAME_NAME \
         env.seed=$SEED \
         run_name=DQN_${GAME_NAME}_$SEED \
-        running_setup.num_threads=$CUSTOM_THREADS \
-        running_setup.device_steps=cuda:0
+        running_setup.num_threads=$CUSTOM_THREADS
 
     wandb sync outputs/DQN_${GAME_NAME}_$SEED
 
