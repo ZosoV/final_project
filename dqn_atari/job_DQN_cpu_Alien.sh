@@ -101,7 +101,8 @@ if [ "$VARIANT" == "BPER" ]; then
         running_setup.num_threads=$CUSTOM_THREADS #\
         # running_setup.enable_lazy_tensor_buffer=True
 
-    wandb sync outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
+    wandb sync --sync-all --no-include-synced outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
+    sleep 100  # 5-minute buffer
 
 elif [ "$VARIANT" == "PER" ]; then
     python dqn_torchrl.py -m \
@@ -114,7 +115,8 @@ elif [ "$VARIANT" == "PER" ]; then
         running_setup.num_threads=$CUSTOM_THREADS #\
         # running_setup.enable_lazy_tensor_buffer=True
 
-    wandb sync outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
+    wandb sync --sync-all --no-include-synced outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
+    sleep 100  # 5-minute buffer
         
 elif [ "$VARIANT" == "MICO" ]; then
     python dqn_torchrl.py -m \
@@ -125,7 +127,8 @@ elif [ "$VARIANT" == "MICO" ]; then
         running_setup.num_threads=$CUSTOM_THREADS #\
         # running_setup.enable_lazy_tensor_buffer=True
 
-    wandb sync outputs/DQN_MICO_${GAME_NAME}_$SEED
+    wandb sync --sync-all --no-include-synced outputs/DQN_MICO_${GAME_NAME}_$SEED
+    sleep 100  # 5-minute buffer
 
 elif [ "$VARIANT" == "DQN" ]; then
     python dqn_torchrl.py -m \
@@ -133,11 +136,11 @@ elif [ "$VARIANT" == "DQN" ]; then
         env.seed=$SEED \
         run_name=DQN_${GAME_NAME}_$SEED \
         running_setup.num_threads=$CUSTOM_THREADS \
-        running_setup.num_envs=20 \
-        running_setup.prefetch=20
+        running_setup.num_envs=20
         # running_setup.enable_lazy_tensor_buffer=True
 
-    wandb sync outputs/DQN_${GAME_NAME}_$SEED
+    wandb sync --sync-all --no-include-synced outputs/DQN_${GAME_NAME}_$SEED
+    sleep 100  # 5-minute buffer
 
 else
     echo "Unknown variant: $VARIANT"
