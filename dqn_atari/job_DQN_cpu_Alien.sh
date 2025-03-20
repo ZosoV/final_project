@@ -6,14 +6,14 @@
 #SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=40
 #SBATCH --mem-per-cpu=8GB
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
 #SBATCH --constraint=sapphire
 
 GAME_NAME=Alien
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=16
+CUSTOM_THREADS=20
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -133,7 +133,8 @@ elif [ "$VARIANT" == "DQN" ]; then
         env.seed=$SEED \
         run_name=DQN_${GAME_NAME}_$SEED \
         running_setup.num_threads=$CUSTOM_THREADS \
-        running_setup.num_envs=16
+        running_setup.num_envs=20 \
+        running_setup.prefecth=20
         # running_setup.enable_lazy_tensor_buffer=True
 
     wandb sync outputs/DQN_${GAME_NAME}_$SEED
