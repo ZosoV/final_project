@@ -6,7 +6,7 @@
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=14
+#SBATCH --cpus-per-task=28
 #SBATCH --mem-per-cpu=8GB
 ##SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a30:1
@@ -23,7 +23,7 @@ module load tqdm/4.66.1-GCCcore-12.3.0
 
 GAME_NAME=Asteroids
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=8
+CUSTOM_THREADS=14
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
