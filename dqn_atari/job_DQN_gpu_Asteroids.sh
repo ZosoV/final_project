@@ -23,7 +23,7 @@ module load tqdm/4.66.1-GCCcore-12.3.0
 
 GAME_NAME=Asteroids
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=7
+CUSTOM_THREADS=8
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
