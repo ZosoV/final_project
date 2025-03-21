@@ -343,7 +343,8 @@ def main(cfg: "DictConfig"):
 
         sum_score = 0
 
-        steps_in_batch = math.ceil(training_steps / frames_per_batch)
+        # steps_in_batch = math.ceil(training_steps / frames_per_batch)
+        steps_in_batch = training_steps // frames_per_batch
         data_iter = tqdm.tqdm(
                 desc="IT_%s:%d" % ("train", iteration),
                 total= steps_in_batch * frames_per_batch,
