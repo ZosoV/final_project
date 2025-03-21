@@ -60,7 +60,7 @@ env:
 collector:
   num_iterations: 201 # 201
   training_steps: 250_000 # 250_000 # agent steps
-  frames_per_batch: 4 # update_period in Dopamine # agent steps # BO
+  frames_per_batch: 400 # update_period in Dopamine # agent steps # BO
   epsilon_start: 1.0
   epsilon_end: 0.01
   epsilon_decay_period: 250_000 # TODO: decay has to init after warmup # agent steps
@@ -102,7 +102,7 @@ loss:
   double_dqn: False
   gamma: 0.99 #
   target_update_period: 8_000
-  num_updates: 1 
+  num_updates: 100 
   mico_loss:
     enable: False
     mico_weight: 0.01 #0.5 # 0.01 for DQN and Rainbow
