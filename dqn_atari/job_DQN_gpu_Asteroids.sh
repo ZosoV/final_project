@@ -149,7 +149,7 @@ echo "Completed task with seed $SEED at $(date)"
 
 # Cleanup
 # sleep 300  # 5-minute buffer
-# test -d ${BB_WORKDIR}/wandb/ && /bin/cp -r ${BB_WORKDIR}/wandb/ ./outputs/wandb/
+test -d ${BB_WORKDIR}/wandb/ && /bin/cp -r ${BB_WORKDIR}/wandb/ ./outputs/wandb/
 test -d ${BB_WORKDIR} && /bin/rm -rf ${BB_WORKDIR}
 
 echo "Exiting."

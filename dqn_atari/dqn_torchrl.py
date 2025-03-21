@@ -355,6 +355,8 @@ def main(cfg: "DictConfig"):
                 
         for i in range(steps_in_batch):
             data = next(c_iter)
+
+            # print(f"Batch {i} - Data size: {data.numel()}")
         
             data_iter.update(data.numel())
 
