@@ -22,6 +22,7 @@ module load tqdm/4.66.1-GCCcore-12.3.0
 GAME_NAME=Asteroids
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
 CUSTOM_THREADS=9
+ITERATIONS=40
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -96,6 +97,7 @@ if [ "$VARIANT" == "BPER" ]; then
     python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
+        collector.num_iterations=$ITERATIONS \
         loss.mico_loss.enable=True \
         buffer.prioritized_replay.enable=True \
         buffer.prioritized_replay.priority_type=BPERcn \
@@ -108,6 +110,7 @@ elif [ "$VARIANT" == "PER" ]; then
     python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
+        collector.num_iterations=$ITERATIONS \
         loss.mico_loss.enable=True \
         buffer.prioritized_replay.enable=True \
         buffer.prioritized_replay.priority_type=PER \
@@ -120,6 +123,7 @@ elif [ "$VARIANT" == "MICO" ]; then
     python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
+        collector.num_iterations=$ITERATIONS \
         loss.mico_loss.enable=True \
         run_name=DQN_MICO_${GAME_NAME}_${SEED}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} \
         running_setup.num_threads=$CUSTOM_THREADS
@@ -130,6 +134,7 @@ elif [ "$VARIANT" == "DQN" ]; then
     python dqn_torchrl.py -m \
         env.env_name=$GAME_NAME \
         env.seed=$SEED \
+        collector.num_iterations=$ITERATIONS \
         run_name=DQN_${GAME_NAME}_${SEED}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} \
         running_setup.num_threads=$CUSTOM_THREADS
 

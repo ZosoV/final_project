@@ -14,7 +14,7 @@
 GAME_NAME=Alien
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
 CUSTOM_THREADS=4
-ITERATIONS=10
+ITERATIONS=40
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
