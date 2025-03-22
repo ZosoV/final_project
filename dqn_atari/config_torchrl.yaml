@@ -25,7 +25,7 @@ device: null
 # logger
 logger:
   mode: "offline" # "online" or "disabled" ("offline" too but not used)
-  save_checkpoint: True # Note desactivate after first of everyone
+  save_checkpoint: False # Note desactivate after first of everyone
   save_checkpoint_freq: 50
   load_checkpoint: False
   load_checkpoint_path: null
@@ -60,7 +60,7 @@ env:
 collector:
   num_iterations: 201 # 201
   training_steps: 250_000 # 250_000 # agent steps
-  frames_per_batch: 400 # update_period in Dopamine # agent steps # BO
+  frames_per_batch: 4 # update_period in Dopamine # agent steps # BO
   epsilon_start: 1.0
   epsilon_end: 0.01
   epsilon_decay_period: 250_000 # TODO: decay has to init after warmup # agent steps
@@ -102,7 +102,7 @@ loss:
   double_dqn: False
   gamma: 0.99 #
   target_update_period: 8_000
-  num_updates: 100 
+  num_updates: 1 
   mico_loss:
     enable: False
     mico_weight: 0.01 #0.5 # 0.01 for DQN and Rainbow
@@ -111,9 +111,9 @@ loss:
 
 # Currently set for GPU
 running_setup:
-  num_envs: 8 # 8 for cpu (or more)
-  prefetch: 16 # 32 for cpu (or more)
+  num_envs: 4 
+  prefetch: 16
   enable_lazy_tensor_buffer : False # True for cpu
   device_steps: "cpu"
-  num_threads: null # set to 1 for cpu
-  pin_memory: False # True for gpu
+  num_threads: null
+  pin_memory: False

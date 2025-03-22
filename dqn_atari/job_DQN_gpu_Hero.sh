@@ -7,7 +7,7 @@
 #SBATCH --qos=bbgpu
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=18
-#SBATCH --mem-per-cpu=8GB
+#SBATCH --mem-per-cpu=6GB
 ##SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
 #SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
@@ -104,7 +104,7 @@ if [ "$VARIANT" == "BPER" ]; then
         run_name=DQN_MICO_BPER_${GAME_NAME}_$SEED \
         running_setup.num_threads=$CUSTOM_THREADS
 
-    wandb sync outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
+    # wandb sync outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "PER" ]; then
     python dqn_torchrl.py -m \
@@ -116,7 +116,7 @@ elif [ "$VARIANT" == "PER" ]; then
         run_name=DQN_MICO_PER_${GAME_NAME}_$SEED \
         running_setup.num_threads=$CUSTOM_THREADS
 
-    wandb sync outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
+    # wandb sync outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "MICO" ]; then
     python dqn_torchrl.py -m \
@@ -126,7 +126,7 @@ elif [ "$VARIANT" == "MICO" ]; then
         run_name=DQN_MICO_${GAME_NAME}_$SEED \
         running_setup.num_threads=$CUSTOM_THREADS
     
-    wandb sync outputs/DQN_MICO_${GAME_NAME}_$SEED
+    # wandb sync outputs/DQN_MICO_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "DQN" ]; then
     python dqn_torchrl.py -m \
@@ -135,7 +135,7 @@ elif [ "$VARIANT" == "DQN" ]; then
         run_name=DQN_${GAME_NAME}_$SEED \
         running_setup.num_threads=$CUSTOM_THREADS
 
-    wandb sync outputs/DQN_${GAME_NAME}_$SEED
+    # wandb sync outputs/DQN_${GAME_NAME}_$SEED
 
 else
     echo "Unknown variant: $VARIANT"
