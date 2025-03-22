@@ -13,7 +13,7 @@
 
 GAME_NAME=Alien
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=4
+CUSTOM_THREADS=16
 ITERATIONS=40
 
 # Temporary scratch space for I/O efficiency
