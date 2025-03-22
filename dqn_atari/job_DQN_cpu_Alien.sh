@@ -101,7 +101,7 @@ if [ "$VARIANT" == "BPER" ]; then
         running_setup.num_threads=$CUSTOM_THREADS #\
         # running_setup.enable_lazy_tensor_buffer=True
 
-    wandb sync --sync-all --no-include-synced outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
+    # wandb sync --sync-all --no-include-synced outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
     sleep 100  # 5-minute buffer
 
 elif [ "$VARIANT" == "PER" ]; then
@@ -115,7 +115,7 @@ elif [ "$VARIANT" == "PER" ]; then
         running_setup.num_threads=$CUSTOM_THREADS #\
         # running_setup.enable_lazy_tensor_buffer=True
 
-    wandb sync --sync-all --no-include-synced outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
+    # wandb sync --sync-all --no-include-synced outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
     sleep 100  # 5-minute buffer
         
 elif [ "$VARIANT" == "MICO" ]; then
@@ -127,7 +127,7 @@ elif [ "$VARIANT" == "MICO" ]; then
         running_setup.num_threads=$CUSTOM_THREADS #\
         # running_setup.enable_lazy_tensor_buffer=True
 
-    wandb sync --sync-all --no-include-synced outputs/DQN_MICO_${GAME_NAME}_$SEED
+    # wandb sync --sync-all --no-include-synced outputs/DQN_MICO_${GAME_NAME}_$SEED
     sleep 100  # 5-minute buffer
 
 elif [ "$VARIANT" == "DQN" ]; then
@@ -136,12 +136,12 @@ elif [ "$VARIANT" == "DQN" ]; then
         env.seed=$SEED \
         run_name=DQN_${GAME_NAME}_$SEED \
         running_setup.num_threads=$CUSTOM_THREADS \
-        running_setup.num_envs=16 \
-        collector.frames_per_batch=16 \
-        loss.num_updates=4
+        running_setup.num_envs=4 \
+        collector.frames_per_batch=4 \
+        loss.num_updates=1
         # running_setup.enable_lazy_tensor_buffer=True
 
-    wandb sync --sync-all --no-include-synced outputs/DQN_${GAME_NAME}_$SEED
+    # wandb sync --sync-all --no-include-synced outputs/DQN_${GAME_NAME}_$SEED
     sleep 100  # 5-minute buffer
 
 else
