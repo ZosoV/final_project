@@ -141,7 +141,11 @@ elif [ "$VARIANT" == "DQN" ]; then
         env.seed=$SEED \
         run_name=DQN_${GAME_NAME}_${SEED}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} \
         running_setup.num_threads=$CUSTOM_THREADS \
-        running_setup.prefetch=4
+        running_setup.prefetch=4 \
+        running_setup.num_envs=16 \
+        collector.frames_per_batch=400 \
+        loss.num_updates=100
+
 
     # Add 
 

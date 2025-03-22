@@ -1,11 +1,11 @@
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-GAME_NAME=Hero
+GAME_NAME=Alien
 seeds=(118398 919409 711872 442081 189061)
 
 # Select the seed based on the SLURM array task ID
 SEED=${seeds[$SLURM_ARRAY_TASK_ID]}
 
-ITERATIONS=25
+ITERATIONS=40
 
 
 # sleep 300  # 5-minute buffer
@@ -37,8 +37,7 @@ python dqn_torchrl.py -m \
     collector.num_iterations=$ITERATIONS \
     running_setup.num_threads=$CUSTOM_THREADS \
     running_setup.num_envs=4 \
-    collector.frames_per_batch=4 \
-    loss.num_updates=1
+    running_setup.prefetch=4 \
 
 # echo "Sleeping for 5 minutes..."
 # sleep 300  # 5-minute buffer
