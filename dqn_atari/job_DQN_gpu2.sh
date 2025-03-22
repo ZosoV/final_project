@@ -1,11 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN-Asteroids
-#SBATCH --array=1
+#SBATCH --array=0
 #SBATCH --ntasks=1
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
-#SBATCH --nodes=1
 #SBATCH --cpus-per-task=18
 ##SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a100:1
@@ -22,7 +21,7 @@ module load tqdm/4.66.1-GCCcore-12.3.0
 
 GAME_NAME=Asteroids
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=9
+CUSTOM_THREADS=4
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -103,7 +102,7 @@ if [ "$VARIANT" == "BPER" ]; then
         run_name=DQN_MICO_BPER_${GAME_NAME}_$SEED \
         running_setup.num_threads=$CUSTOM_THREADS
 
-    wandb sync outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
+    # wandb sync outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "PER" ]; then
     python dqn_torchrl.py -m \
@@ -115,7 +114,7 @@ elif [ "$VARIANT" == "PER" ]; then
         run_name=DQN_MICO_PER_${GAME_NAME}_$SEED \
         running_setup.num_threads=$CUSTOM_THREADS
 
-    wandb sync outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
+    # wandb sync outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "MICO" ]; then
     python dqn_torchrl.py -m \
@@ -125,7 +124,7 @@ elif [ "$VARIANT" == "MICO" ]; then
         run_name=DQN_MICO_${GAME_NAME}_$SEED \
         running_setup.num_threads=$CUSTOM_THREADS
     
-    wandb sync outputs/DQN_MICO_${GAME_NAME}_$SEED
+    # wandb sync outputs/DQN_MICO_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "DQN" ]; then
     python dqn_torchrl.py -m \
@@ -134,7 +133,7 @@ elif [ "$VARIANT" == "DQN" ]; then
         run_name=DQN_${GAME_NAME}_$SEED \
         running_setup.num_threads=$CUSTOM_THREADS
 
-    wandb sync outputs/DQN_${GAME_NAME}_$SEED
+    # wandb sync outputs/DQN_${GAME_NAME}_$SEED
 
 else
     echo "Unknown variant: $VARIANT"
