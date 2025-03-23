@@ -50,7 +50,7 @@ collector:
   epsilon_decay_period: 1_000_000 # or try 1000000 Machado uses 1000000 of frames = 250_000 steps
   warmup_steps: 20_000 # 20_000 # min_replay_history in Dopamine # agent steps
   frame_stack: 4
-  max_steps_per_episode = 27000 # in total 108000 frames
+  max_steps_per_episode: 27000 # in total 108000 frames
 
 # policy
 policy:
