@@ -8,7 +8,7 @@ device: null
 
 # logger
 logger:
-  mode: "online" # "online" or "disabled" ("offline" too but not used)
+  mode: "offline" # "online" or "disabled" ("offline" too but not used)
   save_checkpoint: False # Note desactivate after first of everyone
   save_checkpoint_freq: 50
   load_checkpoint: False

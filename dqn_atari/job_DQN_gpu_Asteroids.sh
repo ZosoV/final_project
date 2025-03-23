@@ -5,9 +5,9 @@
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
-#SBATCH --cpus-per-task=18
+#SBATCH --cpus-per-task=14
 ##SBATCH --account=giacobbm-bisimulation-rl
-#SBATCH --gres=gpu:a100:1
+#SBATCH --gres=gpu:a30:1
 #SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
 
 module purge; module load bluebear
@@ -21,7 +21,7 @@ module load tqdm/4.66.1-GCCcore-12.3.0
 
 GAME_NAME=Asteroids
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=9
+CUSTOM_THREADS=14
 ITERATIONS=40
 
 # Temporary scratch space for I/O efficiency
@@ -136,7 +136,11 @@ elif [ "$VARIANT" == "DQN" ]; then
         env.seed=$SEED \
         collector.num_iterations=$ITERATIONS \
         run_name=DQN_${GAME_NAME}_${SEED}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} \
-        running_setup.num_threads=$CUSTOM_THREADS
+        running_setup.num_threads=$CUSTOM_THREADS \
+        running_setup.prefetch=10 \
+        running_setup.num_envs=4 \
+        collector.frames_per_batch=4 \
+        loss.num_updates=1        
 
     # wandb sync outputs/DQN_${GAME_NAME}_$SEED
 
