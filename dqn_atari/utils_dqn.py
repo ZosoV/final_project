@@ -71,7 +71,7 @@ def make_env(env_name="Asteroids", frame_stack = 4,
     #env.append_transform(SignTransform(in_keys=["reward"])) #NOTE: this function simplifies the reward to -1, 0, 1
     # env.append_transform(RewardClipping(clamp_min =-1, clamp_max=1))
 
-    env.append_transform(StepCounter(max_steps=27000)) 
+    env.append_transform(StepCounter(max_steps=max_steps_per_episode)) 
     env.append_transform(DoubleToFloat())
     env.set_seed(seed)
     return env
