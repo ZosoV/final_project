@@ -173,42 +173,39 @@ def main(cfg: "DictConfig"):
         greedy_module,
     ).to(device)
 
-
-    # Create the collector
-    # NOTE: warmup_steps: Number of frames 
-    # for which the policy is ignored before it is called.
-    # collector = SyncDataCollector(
-    #     create_env_fn=make_env(cfg.env.env_name,
-    #                             frame_stack = frame_stack,
-    #                             device = "cpu", 
-    #                             seed = cfg.env.seed,
-                                # max_steps_per_episode = cfg.collector.max_steps_per_episode),
-    #     policy=model_explore,
-    #     frames_per_batch=frames_per_batch,
-    #     exploration_type=ExplorationType.RANDOM,
-    #     env_device="cpu",
-    #     storing_device="cpu",
-    #     policy_device="cpu",
-    #     split_trajs=False,
-    #     init_random_frames=warmup_steps,
-    # )
     env_maker = lambda: make_env(cfg.env.env_name,
                                 frame_stack = frame_stack,
                                 device = device_steps, 
                                 seed = cfg.env.seed,
                                 max_steps_per_episode = cfg.collector.max_steps_per_episode)
-    collector = MultiSyncDataCollector(
-        create_env_fn=[env_maker] * cfg.running_setup.num_envs,
-        policy=model_explore,
-        frames_per_batch=frames_per_batch,
-        exploration_type=ExplorationType.RANDOM,
-        env_device=device_steps,
-        policy_device=device_steps,
-        storing_device=device_steps,
-        split_trajs=False,
-        init_random_frames=warmup_steps,
-        cat_results="stack",     
-    )
+    # Create the collector
+    if cfg.running_setup.num_envs == 1:
+    # NOTE: warmup_steps: Number of frames 
+    # for which the policy is ignored before it is called.
+        collector = SyncDataCollector(
+            create_env_fn=env_maker,
+            policy=model_explore,
+            frames_per_batch=frames_per_batch,
+            exploration_type=ExplorationType.RANDOM,
+            env_device=device_steps,
+            storing_device=device_steps,
+            policy_device=device_steps,
+            split_trajs=False,
+            init_random_frames=warmup_steps,
+        )
+    else: 
+        collector = MultiSyncDataCollector(
+            create_env_fn=[env_maker] * cfg.running_setup.num_envs,
+            policy=model_explore,
+            frames_per_batch=frames_per_batch,
+            exploration_type=ExplorationType.RANDOM,
+            env_device=device_steps,
+            policy_device=device_steps,
+            storing_device=device_steps,
+            split_trajs=False,
+            init_random_frames=warmup_steps,
+            cat_results="stack",     
+        )
 
     # Create the replay buffer
     if enable_prioritized_replay:

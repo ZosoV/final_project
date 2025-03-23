@@ -139,8 +139,8 @@ elif [ "$VARIANT" == "DQN" ]; then
         running_setup.num_threads=$CUSTOM_THREADS \
         running_setup.prefetch=14 \
         running_setup.num_envs=4 \
-        collector.frames_per_batch=400 \
-        loss.num_updates=100        
+        collector.frames_per_batch=4 \
+        loss.num_updates=1        
 
     # wandb sync outputs/DQN_${GAME_NAME}_$SEED
 
