@@ -163,7 +163,7 @@ def main(cfg: "DictConfig"):
     # it will take for epsilon to reach the eps_end value.
     # the decay is linear
     greedy_module = EGreedyModule(
-        annealing_num_steps=cfg.collector.epsilon_decay_period * 4,
+        annealing_num_steps=cfg.collector.epsilon_decay_period,
         eps_init=cfg.collector.epsilon_start,
         eps_end=cfg.collector.epsilon_end,
         spec=model.spec,
