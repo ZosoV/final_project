@@ -1,20 +1,4 @@
-# This file allow me to set
-# DQN
-# DQN + PER
-# DQN + BPER
-# DQN + BPER + moving average
-# DQN + MICO
-# DQN + MICO + PER
-# DQN + MICO + BPER
-# DQN + MICO + BPER + moving average
-
-# I think the most interesting is to compare
-# DQN + MICO + PER
-# DQN + MICO + BPER
-
-# For reference (DQN + MICo ask to PSC)
-# DQN
-# DQN + MICO
+# Closes to Dopamine config following Rainbow and Machado et al. 2018
 
 run_name: DQN_atari
 project_name: "atari_benchmark"
@@ -24,7 +8,7 @@ device: null
 
 # logger
 logger:
-  mode: "offline" # "online" or "disabled" ("offline" too but not used)
+  mode: "online" # "online" or "disabled" ("offline" too but not used)
   save_checkpoint: False # Note desactivate after first of everyone
   save_checkpoint_freq: 50
   load_checkpoint: False
@@ -63,9 +47,10 @@ collector:
   frames_per_batch: 4 # update_period in Dopamine # agent steps # BO
   epsilon_start: 1.0
   epsilon_end: 0.01
-  epsilon_decay_period: 250_000 # TODO: decay has to init after warmup # agent steps
-  warmup_steps: 20_000 # 20_004 # min_replay_history in Dopamine # agent steps
+  epsilon_decay_period: 1_000_000 # or try 1000000 Machado uses 1000000 of frames = 250_000 steps
+  warmup_steps: 20_000 # 20_000 # min_replay_history in Dopamine # agent steps
   frame_stack: 4
+  max_steps_per_episode = 27000 # in total 108000 frames
 
 # policy
 policy:

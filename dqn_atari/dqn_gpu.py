@@ -163,7 +163,7 @@ def main(cfg: "DictConfig"):
     # it will take for epsilon to reach the eps_end value.
     # the decay is linear
     greedy_module = EGreedyModule(
-        annealing_num_steps=cfg.collector.epsilon_decay_period * 4,
+        annealing_num_steps=cfg.collector.epsilon_decay_period,
         eps_init=cfg.collector.epsilon_start,
         eps_end=cfg.collector.epsilon_end,
         spec=model.spec,
@@ -181,8 +181,7 @@ def main(cfg: "DictConfig"):
     #     create_env_fn=make_env(cfg.env.env_name,
     #                             frame_stack = frame_stack,
     #                             device = "cpu", 
-    #                             seed = cfg.env.seed,
-                                # max_steps_per_episode = cfg.collector.max_steps_per_episode),
+    #                             seed = cfg.env.seed),
     #     policy=model_explore,
     #     frames_per_batch=frames_per_batch,
     #     exploration_type=ExplorationType.RANDOM,
@@ -195,8 +194,7 @@ def main(cfg: "DictConfig"):
     env_maker = lambda: make_env(cfg.env.env_name,
                                 frame_stack = frame_stack,
                                 device = device_steps, 
-                                seed = cfg.env.seed,
-                                max_steps_per_episode = cfg.collector.max_steps_per_episode)
+                                seed = cfg.env.seed)
     collector = MultiSyncDataCollector(
         create_env_fn=[env_maker] * cfg.running_setup.num_envs,
         policy=model_explore,
@@ -206,7 +204,7 @@ def main(cfg: "DictConfig"):
         policy_device=device_steps,
         storing_device=device_steps,
         split_trajs=False,
-        init_random_frames=warmup_steps,
+        init_random_frames=warmup_steps, # NOTE: this is actually the steps after skipping
         cat_results="stack",     
     )
 
@@ -296,8 +294,7 @@ def main(cfg: "DictConfig"):
         test_env = make_env(cfg.env.env_name,
                             frame_stack,
                             device,
-                            seed=cfg.env.seed,
-                            max_steps_per_episode = cfg.collector.max_steps_per_episode, 
+                            seed=cfg.env.seed, 
                             is_test=True)
         test_env.eval()
 

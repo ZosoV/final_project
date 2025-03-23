@@ -39,7 +39,7 @@ np.float_ = np.float64
 
 
 def make_env(env_name="Asteroids", frame_stack = 4, 
-             device="cpu", seed = 0, is_test=False):
+             device="cpu", seed = 0, is_test=False, max_steps_per_episode=27000):
 
     full_game_name = f'ALE/{env_name}-v5'
 
