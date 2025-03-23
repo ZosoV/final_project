@@ -14,7 +14,7 @@
 GAME_NAME=Alien
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
 CUSTOM_THREADS=16
-ITERATIONS=40
+ITERATIONS=100
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -92,7 +92,7 @@ export MKL_NUM_THREADS=$CUSTOM_THREADS
 
 # Execute based on the selected variant
 if [ "$VARIANT" == "BPER" ]; then
-    python dqn_torchrl.py -m \
+    python dqn_mnih.py -m \
         collector.num_iterations=$ITERATIONS \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
@@ -107,7 +107,7 @@ if [ "$VARIANT" == "BPER" ]; then
     sleep 100  # 5-minute buffer
 
 elif [ "$VARIANT" == "PER" ]; then
-    python dqn_torchrl.py -m \
+    python dqn_mnih.py -m \
         env.seed=$SEED \
         collector.num_iterations=$ITERATIONS \
         env.env_name=$GAME_NAME \
@@ -122,7 +122,7 @@ elif [ "$VARIANT" == "PER" ]; then
     sleep 100  # 5-minute buffer
         
 elif [ "$VARIANT" == "MICO" ]; then
-    python dqn_torchrl.py -m \
+    python dqn_mnih.py -m \
         env.seed=$SEED \
         collector.num_iterations=$ITERATIONS \
         env.env_name=$GAME_NAME \
@@ -135,22 +135,12 @@ elif [ "$VARIANT" == "MICO" ]; then
     sleep 100  # 5-minute buffer
 
 elif [ "$VARIANT" == "DQN" ]; then
-    python dqn_torchrl.py -m \
+    python dqn_mnih.py -m \
         collector.num_iterations=$ITERATIONS \
         env.env_name=$GAME_NAME \
         env.seed=$SEED \
         run_name=DQN_${GAME_NAME}_${SEED}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} \
-        running_setup.num_threads=$CUSTOM_THREADS \
-        running_setup.prefetch=16 \
-        running_setup.num_envs=16 \
-        collector.frames_per_batch=400 \
-        loss.num_updates=100
-
-
-    # Add 
-
-    # wandb sync --sync-all --no-include-synced outputs/DQN_${GAME_NAME}_$SEED
-    sleep 100  # 5-minute buffer
+        running_setup.num_threads=$CUSTOM_THREADS
 
 else
     echo "Unknown variant: $VARIANT"

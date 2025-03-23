@@ -64,9 +64,9 @@ collector:
   epsilon_start: 1.0
   epsilon_end: 0.01
   epsilon_decay_period: 250_000 # TODO: decay has to init after warmup # agent steps
-  warmup_steps: 20_000 # 20_004 # min_replay_history in Dopamine # agent steps
+  warmup_steps: 12_500 # 20_004 # min_replay_history in Dopamine # agent steps
   frame_stack: 4
-  max_steps_per_episode: 27000 # in total 108000 frames
+  max_steps_per_episode: 4500 # in total 108000 frames
 
 # policy
 policy:
@@ -89,7 +89,7 @@ buffer:
     priority_type: "BPERcn" # "BPERcn" # "BPERaa: all_vs_all" or "BPERcn: current_vs_next" or PER
     priority_weight: 1.0 # 1.0 full BPER and 0 PER (only avaiable when using mico)
     moving_average: null # Normalize the priorities with a moving average over mean and std over time
-    alpha: 0.5 # alpha: priority exponent
+    alpha: 0.6 # alpha: priority exponent
     beta: 0.4 # beta: importance sampling exponent
 
 # Optim
@@ -102,7 +102,7 @@ optim:
 loss:
   double_dqn: False
   gamma: 0.99 #
-  target_update_period: 8_000
+  target_update_period: 10_000
   num_updates: 1 
   mico_loss:
     enable: False

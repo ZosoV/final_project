@@ -182,6 +182,7 @@ def main(cfg: "DictConfig"):
     if cfg.running_setup.num_envs == 1:
     # NOTE: warmup_steps: Number of frames 
     # for which the policy is ignored before it is called.
+        print("Using Single SyncDataCollector")
         collector = SyncDataCollector(
             create_env_fn=env_maker,
             policy=model_explore,
@@ -193,7 +194,8 @@ def main(cfg: "DictConfig"):
             split_trajs=False,
             init_random_frames=warmup_steps,
         )
-    else: 
+    else:
+        print("Using MultiSyncDataCollector")
         collector = MultiSyncDataCollector(
             create_env_fn=[env_maker] * cfg.running_setup.num_envs,
             policy=model_explore,
@@ -361,6 +363,8 @@ def main(cfg: "DictConfig"):
             # NOTE: This reshape must be for frame data (maybe)
             data = data.reshape(-1)
             steps_so_far += frames_per_batch
+            
+            # NOTE: I think when I call again this I'm doing other step over greedy_module
             greedy_module.step(frames_per_batch)
 
             # if enable_mico:

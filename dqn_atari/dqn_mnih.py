@@ -58,7 +58,7 @@ import gymnasium as gym
 import ale_py
 import os
 
-@hydra.main(config_path=".", config_name="config_torchrl", version_base=None)
+@hydra.main(config_path=".", config_name="config_mnih", version_base=None)
 def main(cfg: "DictConfig"):
 
     # Register the environments
@@ -173,40 +173,41 @@ def main(cfg: "DictConfig"):
         greedy_module,
     ).to(device)
 
-
-    # Create the collector
-    # NOTE: warmup_steps: Number of frames 
-    # for which the policy is ignored before it is called.
-    # collector = SyncDataCollector(
-    #     create_env_fn=make_env(cfg.env.env_name,
-    #                             frame_stack = frame_stack,
-    #                             device = "cpu", 
-    #                             seed = cfg.env.seed),
-    #     policy=model_explore,
-    #     frames_per_batch=frames_per_batch,
-    #     exploration_type=ExplorationType.RANDOM,
-    #     env_device="cpu",
-    #     storing_device="cpu",
-    #     policy_device="cpu",
-    #     split_trajs=False,
-    #     init_random_frames=warmup_steps,
-    # )
     env_maker = lambda: make_env(cfg.env.env_name,
                                 frame_stack = frame_stack,
                                 device = device_steps, 
-                                seed = cfg.env.seed)
-    collector = MultiSyncDataCollector(
-        create_env_fn=[env_maker] * cfg.running_setup.num_envs,
-        policy=model_explore,
-        frames_per_batch=frames_per_batch,
-        exploration_type=ExplorationType.RANDOM,
-        env_device=device_steps,
-        policy_device=device_steps,
-        storing_device=device_steps,
-        split_trajs=False,
-        init_random_frames=warmup_steps, # NOTE: this is actually the steps after skipping
-        cat_results="stack",     
-    )
+                                seed = cfg.env.seed,
+                                max_steps_per_episode = cfg.collector.max_steps_per_episode)
+    # Create the collector
+    if cfg.running_setup.num_envs == 1:
+    # NOTE: warmup_steps: Number of frames 
+    # for which the policy is ignored before it is called.
+        print("Using Single SyncDataCollector")
+        collector = SyncDataCollector(
+            create_env_fn=env_maker,
+            policy=model_explore,
+            frames_per_batch=frames_per_batch,
+            exploration_type=ExplorationType.RANDOM,
+            env_device=device_steps,
+            storing_device=device_steps,
+            policy_device=device_steps,
+            split_trajs=False,
+            init_random_frames=warmup_steps,
+        )
+    else:
+        print("Using MultiSyncDataCollector")
+        collector = MultiSyncDataCollector(
+            create_env_fn=[env_maker] * cfg.running_setup.num_envs,
+            policy=model_explore,
+            frames_per_batch=frames_per_batch,
+            exploration_type=ExplorationType.RANDOM,
+            env_device=device_steps,
+            policy_device=device_steps,
+            storing_device=device_steps,
+            split_trajs=False,
+            init_random_frames=warmup_steps,
+            cat_results="stack",     
+        )
 
     # Create the replay buffer
     if enable_prioritized_replay:
@@ -294,7 +295,8 @@ def main(cfg: "DictConfig"):
         test_env = make_env(cfg.env.env_name,
                             frame_stack,
                             device,
-                            seed=cfg.env.seed, 
+                            seed=cfg.env.seed,
+                            max_steps_per_episode = cfg.collector.max_steps_per_episode, 
                             is_test=True)
         test_env.eval()
 
@@ -361,6 +363,8 @@ def main(cfg: "DictConfig"):
             # NOTE: This reshape must be for frame data (maybe)
             data = data.reshape(-1)
             steps_so_far += frames_per_batch
+            
+            # NOTE: I think when I call again this I'm doing other step over greedy_module
             greedy_module.step(frames_per_batch)
 
             # if enable_mico:
