@@ -92,7 +92,7 @@ export MKL_NUM_THREADS=$CUSTOM_THREADS
 
 # Execute based on the selected variant
 if [ "$VARIANT" == "BPER" ]; then
-    python dqn_torchrl.py -m \
+    python dqn_mnih.py -m \
         collector.num_iterations=$ITERATIONS \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
@@ -107,7 +107,7 @@ if [ "$VARIANT" == "BPER" ]; then
     sleep 100  # 5-minute buffer
 
 elif [ "$VARIANT" == "PER" ]; then
-    python dqn_torchrl.py -m \
+    python dqn_mnih.py -m \
         env.seed=$SEED \
         collector.num_iterations=$ITERATIONS \
         env.env_name=$GAME_NAME \
@@ -122,7 +122,7 @@ elif [ "$VARIANT" == "PER" ]; then
     sleep 100  # 5-minute buffer
         
 elif [ "$VARIANT" == "MICO" ]; then
-    python dqn_torchrl.py -m \
+    python dqn_mnih.py -m \
         env.seed=$SEED \
         collector.num_iterations=$ITERATIONS \
         env.env_name=$GAME_NAME \
@@ -135,7 +135,7 @@ elif [ "$VARIANT" == "MICO" ]; then
     sleep 100  # 5-minute buffer
 
 elif [ "$VARIANT" == "DQN" ]; then
-    python dqn_torchrl.py -m \
+    python dqn_mnih.py -m \
         collector.num_iterations=$ITERATIONS \
         env.env_name=$GAME_NAME \
         env.seed=$SEED \

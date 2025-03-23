@@ -173,6 +173,10 @@ def main(cfg: "DictConfig"):
         greedy_module,
     ).to(device)
 
+
+    # Flushing the first epsilon value
+    wandb.log({"train/epsilon": greedy_module.eps.item()}, step=0)
+
     env_maker = lambda: make_env(cfg.env.env_name,
                                 frame_stack = frame_stack,
                                 device = device_steps, 
@@ -206,7 +210,8 @@ def main(cfg: "DictConfig"):
             storing_device=device_steps,
             split_trajs=False,
             init_random_frames=warmup_steps,
-            cat_results="stack",     
+            cat_results="stack",
+            num_threads = cfg.running_setup.num_threads     
         )
 
     # Create the replay buffer
@@ -336,7 +341,18 @@ def main(cfg: "DictConfig"):
         torch.set_num_threads(cfg.running_setup.num_threads)  
         print(f"Threads after setting manually: {torch.get_num_threads()}")
 
+    # Running the warmup phase to fill the replay buffer
+    print("Warmup phase ...")
+    curr_warmup_steps = 0
+    for i in range(warmup_steps // frames_per_batch):
+        data = next(c_iter)
+        data = data.reshape(-1)
+        curr_warmup_steps += data.numel()
+        replay_buffer.extend(data)
+    print("Warmup phase finished with steps: ", curr_warmup_steps)
+
     print("Initial PyTorch Threads: ", torch.get_num_threads())
+    print("Init main loop ...")
     for iteration in range(start_iteration, cfg.collector.num_iterations + start_iteration):
 
         sum_return = 0
@@ -357,15 +373,18 @@ def main(cfg: "DictConfig"):
                 
         for i in range(steps_in_batch):
             data = next(c_iter)
-        
-            data_iter.update(data.numel())
+
+            current_env_step = data.numel()
+            data_iter.update(current_env_step)
 
             # NOTE: This reshape must be for frame data (maybe)
             data = data.reshape(-1)
-            steps_so_far += frames_per_batch
+            steps_so_far += current_env_step
             
-            # NOTE: I think when I call again this I'm doing other step over greedy_module
-            greedy_module.step(frames_per_batch)
+            greedy_module.step(current_env_step)  # 4 is the skip frame
+
+            # Flusing the epsilon for checking
+            # wandb.log({"train/epsilon": greedy_module.eps.item()}, step=steps_so_far * 4)
 
             # if enable_mico:
             #     data = calculate_mico_distance(loss_module, data)
@@ -403,8 +422,8 @@ def main(cfg: "DictConfig"):
             # Warmup phase (due to the continue statement)
             # Additionally This help us to keep a track of the steps_so_far
             # after the warmup_steps
-            if steps_so_far < warmup_steps:
-                continue
+            # if steps_so_far < warmup_steps:
+            #     continue
 
             # optimization steps
             for j in range(num_updates):            
@@ -459,59 +478,59 @@ def main(cfg: "DictConfig"):
         #             }
         #         )
 
-        if steps_so_far >= warmup_steps:
-            info2flush = {
-                "train/epsilon": greedy_module.eps.item(),
-                "train/average_q_value": torch.gather(data["action_value"], 1, data["action"].unsqueeze(1)).mean().item(),
-                "train/average_steps_per_second": average_steps_per_second,
-                "train/average_total_loss": loss["loss"].mean().item(),
-                "train/average_td_loss": loss["loss"].mean().item(),
-            }
-            if enable_mico:
-                info2flush.update({
-                    "train/average_mico_loss": loss["mico_loss"].mean().item(),
-                    "train/average_td_loss": loss["td_loss"].mean().item(),
-                })
-            
-            if number_of_episodes > 0:
-                total_episodes += number_of_episodes
-                info2flush["train/average_return"] = sum_return / number_of_episodes
-                info2flush["train/average_score"] = sum_score / number_of_episodes
-                info2flush["train/average_episode_length"] = num_steps / number_of_episodes
+        # if steps_so_far >= warmup_steps:
+        info2flush = {
+            "train/epsilon": greedy_module.eps.item(),
+            "train/average_q_value": torch.gather(data["action_value"], 1, data["action"].unsqueeze(1)).mean().item(),
+            "train/average_steps_per_second": average_steps_per_second,
+            "train/average_total_loss": loss["loss"].mean().item(),
+            "train/average_td_loss": loss["loss"].mean().item(),
+        }
+        if enable_mico:
+            info2flush.update({
+                "train/average_mico_loss": loss["mico_loss"].mean().item(),
+                "train/average_td_loss": loss["td_loss"].mean().item(),
+            })
+        
+        if number_of_episodes > 0:
+            total_episodes += number_of_episodes
+            info2flush["train/average_return"] = sum_return / number_of_episodes
+            info2flush["train/average_score"] = sum_score / number_of_episodes
+            info2flush["train/average_episode_length"] = num_steps / number_of_episodes
 
-            # Evaluation
-            if enable_evaluation:
-                if (iteration + 1) % eval_freq == 0:
-                    test_reward, accuracy = eval_model(model, test_env, iteration)
-                    info2flush["eval/average_return"] = test_reward
-                    info2flush["eval/accuracy"] = accuracy
+        # Evaluation
+        if enable_evaluation:
+            if (iteration + 1) % eval_freq == 0:
+                test_reward, accuracy = eval_model(model, test_env, iteration)
+                info2flush["eval/average_return"] = test_reward
+                info2flush["eval/accuracy"] = accuracy
 
 
-            if cfg.logger.save_checkpoint:
-                if (iteration + 1) % cfg.logger.save_checkpoint_freq == 0:
-                    print(f"Saving checkpoint at iteration {iteration}")
-                    
-                    # Create the directory
-                    path = f"models/dqn/{date_str}"
-                    os.makedirs(path, exist_ok=True)
-                    
-                    # Save checkpoint
-                    checkpoint = {
-                        'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict(),
-                        'iteration': iteration,
-                        'steps_so_far': steps_so_far,
-                        'total_episodes': total_episodes,
-                        # 'replay_buffer': replay_buffer.state_dict(),  # Save replay buffer state if supported
-                        # 'greedy_module_state_dict': greedy_module.state_dict(),
-                    }
-                    torch.save(checkpoint, f"{path}/{cfg.run_name}_checkpoint_{iteration}.pth")
+        if cfg.logger.save_checkpoint:
+            if (iteration + 1) % cfg.logger.save_checkpoint_freq == 0:
+                print(f"Saving checkpoint at iteration {iteration}")
+                
+                # Create the directory
+                path = f"models/dqn/{date_str}"
+                os.makedirs(path, exist_ok=True)
+                
+                # Save checkpoint
+                checkpoint = {
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'iteration': iteration,
+                    'steps_so_far': steps_so_far,
+                    'total_episodes': total_episodes,
+                    # 'replay_buffer': replay_buffer.state_dict(),  # Save replay buffer state if supported
+                    # 'greedy_module_state_dict': greedy_module.state_dict(),
+                }
+                torch.save(checkpoint, f"{path}/{cfg.run_name}_checkpoint_{iteration}.pth")
 
-            # Flush the information to wandb
-            # NOTE: We must flush the information by multiplying the step by 4 because
-            # the skip frame is 4 in the environment. Then the collected frames are 4 times
-            # print("Average Score: ", sum_score / number_of_episodes)
-            wandb.log(info2flush, step=steps_so_far * 4)
+        # Flush the information to wandb
+        # NOTE: We must flush the information by multiplying the step by 4 because
+        # the skip frame is 4 in the environment. Then the collected frames are 4 times
+        # print("Average Score: ", sum_score / number_of_episodes)
+        wandb.log(info2flush, step=steps_so_far * 4)
 
     collector.shutdown()
     end_time = time.time()

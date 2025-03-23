@@ -58,7 +58,7 @@ env:
 # update_period of 4 steps
 
 collector:
-  num_iterations: 200 # 201
+  num_iterations: 201 # 201
   training_steps: 250_000 # 250_000 # agent steps
   frames_per_batch: 4 # update_period in Dopamine # agent steps # BO
   epsilon_start: 1.0

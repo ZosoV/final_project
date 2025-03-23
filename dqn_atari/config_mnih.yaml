@@ -36,7 +36,7 @@ logger:
 # Environment
 # SEEDS: [118398, 676190, 786456, 171936, 887739, 919409, 711872, 442081, 189061, 117840]
 env:
-  env_name: Asteroids # Asteroids
+  env_name: Alien # Asteroids
   seed: 118398
 
 # collector
@@ -58,7 +58,7 @@ env:
 # update_period of 4 steps
 
 collector:
-  num_iterations: 200 # 201
+  num_iterations: 201 # 201
   training_steps: 250_000 # 250_000 # agent steps
   frames_per_batch: 4 # update_period in Dopamine # agent steps # BO
   epsilon_start: 1.0
