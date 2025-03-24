@@ -25,6 +25,16 @@ from torchrl.envs import (
     RewardClipping
 )
 
+from torchrl.envs import (
+    NoopResetEnv,
+    FrameSkipTransform,
+    TimeMaxPool,
+    GrayScale,
+    Resize,
+    EndOfLifeTransform,
+    PermuteTransform
+)
+
 import gymnasium as gym
 from gymnasium.wrappers import AtariPreprocessing
 from torchrl.envs import GymWrapper
@@ -59,6 +69,16 @@ def make_env(env_name="Asteroids", frame_stack = 4,
                     categorical_action_encoding=True)
         
     env = TransformedEnv(env)
+
+    # Added to check torch performance
+    # env.append_transform(NoopResetEnv(noops=30, random=True))
+    # env.append_transform(ToTensorImage(in_keys="observation"))
+    # env.append_transform(PermuteTransform(in_keys="observation", dims=[-1, -3, -2]))
+    # env.append_transform(FrameSkipTransform(frame_skip=4))
+    # env.append_transform(GrayScale(in_keys="observation"))
+    # env.append_transform(Resize(84, 84, in_keys="observation"))
+    # env.append_transform(TimeMaxPool(T=2))
+
     env.append_transform(ToTensorImage(in_keys="observation")) 
     env.append_transform(CatFrames(in_keys="observation",N=frame_stack, dim=-3))
     env.append_transform(RenameTransform(["reward"], ["score"]))

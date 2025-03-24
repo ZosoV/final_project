@@ -7,7 +7,8 @@ conda activate final-project
 # Install torch according the nvidia drivers
 # pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 
-pip install torchrl==0.4.0 torchvision==0.18.1 wandb hydra-core tqdm 
+pip install torchrl==0.4.0 torchvision==0.18.1 
+pip install wandb hydra-core tqdm 
 pip install gymnasium==0.29.1 gymnasium[classic-control] 
 pip install gymnasium[box2d]
 

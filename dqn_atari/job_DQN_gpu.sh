@@ -2,11 +2,13 @@
 #SBATCH --job-name=bisimulation-rl-DQN-Alien
 #SBATCH --array=0
 #SBATCH --ntasks=1
-#SBATCH --time=7-00:00:00
+#SBATCH --time=5-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
-#SBATCH --cpus-per-task=14
-##SBATCH --account=giacobbm-bisimulation-rl
+#SBATCH --cpus-per-task=28
+#SBATCH --nodes=1
+#SBATCH --mem-per-cpu=8GB
+#SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a30:1
 #SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
 
@@ -94,7 +96,7 @@ export MKL_NUM_THREADS=$CUSTOM_THREADS
 
 # Execute based on the selected variant
 if [ "$VARIANT" == "BPER" ]; then
-    python dqn_torchrl.py -m \
+    python dqn_mnih.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         collector.num_iterations=$ITERATIONS \
@@ -107,7 +109,7 @@ if [ "$VARIANT" == "BPER" ]; then
     # wandb sync outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "PER" ]; then
-    python dqn_torchrl.py -m \
+    python dqn_mnih.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         collector.num_iterations=$ITERATIONS \
@@ -120,7 +122,7 @@ elif [ "$VARIANT" == "PER" ]; then
     # wandb sync outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "MICO" ]; then
-    python dqn_torchrl.py -m \
+    python dqn_mnih.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         collector.num_iterations=$ITERATIONS \
@@ -131,16 +133,12 @@ elif [ "$VARIANT" == "MICO" ]; then
     # wandb sync outputs/DQN_MICO_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "DQN" ]; then
-    python dqn_torchrl.py -m \
+    python dqn_mnih.py -m \
         env.env_name=$GAME_NAME \
         env.seed=$SEED \
         collector.num_iterations=$ITERATIONS \
         run_name=DQN_${GAME_NAME}_${SEED}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} \
-        running_setup.num_threads=$CUSTOM_THREADS \
-        running_setup.prefetch=14 \
-        running_setup.num_envs=4 \
-        collector.frames_per_batch=400 \
-        loss.num_updates=100        
+        running_setup.num_threads=$CUSTOM_THREADS 
 
     # wandb sync outputs/DQN_${GAME_NAME}_$SEED
 

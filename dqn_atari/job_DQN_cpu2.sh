@@ -2,7 +2,7 @@
 #SBATCH --job-name=bisimulation-rl-DQN_Alien
 #SBATCH --array=0
 #SBATCH --ntasks=1
-#SBATCH --time=10-00:00:00
+#SBATCH --time=4-00:00:00
 #SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
 #SBATCH --nodes=1

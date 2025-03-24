@@ -57,9 +57,17 @@ np.float_ = np.float64
 import gymnasium as gym
 import ale_py
 import os
+import argparse
 
-@hydra.main(config_path=".", config_name="config_mnih", version_base=None)
+parser = argparse.ArgumentParser()
+parser.add_argument("--config", type=str, default="config_mnih")
+args = parser.parse_args()
+
+
+@hydra.main(config_path=".", config_name=args.config, version_base=None)
 def main(cfg: "DictConfig"):
+
+    print("Using config file: ", args.config)
 
     # Register the environments
     gym.register_envs(ale_py)

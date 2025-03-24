@@ -2,11 +2,13 @@
 #SBATCH --job-name=bisimulation-rl-DQN-Alien
 #SBATCH --array=0
 #SBATCH --ntasks=1
-#SBATCH --time=7-00:00:00
+#SBATCH --time=5-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
-#SBATCH --cpus-per-task=14
-##SBATCH --account=giacobbm-bisimulation-rl
+#SBATCH --cpus-per-task=28
+#SBATCH --nodes=1
+#SBATCH --mem-per-cpu=8GB
+#SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a30:1
 #SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
 
@@ -136,11 +138,7 @@ elif [ "$VARIANT" == "DQN" ]; then
         env.seed=$SEED \
         collector.num_iterations=$ITERATIONS \
         run_name=DQN_${GAME_NAME}_${SEED}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} \
-        running_setup.num_threads=$CUSTOM_THREADS \
-        running_setup.prefetch=14 \
-        running_setup.num_envs=4 \
-        collector.frames_per_batch=4 \
-        loss.num_updates=1        
+        running_setup.num_threads=$CUSTOM_THREADS 
 
     # wandb sync outputs/DQN_${GAME_NAME}_$SEED
 
