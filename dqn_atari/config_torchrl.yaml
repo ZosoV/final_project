@@ -113,7 +113,7 @@ loss:
 # Currently set for GPU
 running_setup:
   num_envs: 4 
-  prefetch: 16
+  prefetch: null
   enable_lazy_tensor_buffer : False # True for cpu
   device_steps: "cpu"
   num_threads: null

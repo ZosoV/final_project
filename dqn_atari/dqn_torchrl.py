@@ -259,7 +259,7 @@ def main(cfg: "DictConfig"):
 
     replay_buffer = TensorDictReplayBuffer(
         pin_memory=cfg.running_setup.pin_memory,
-        prefetch=cfg.running_setup.prefetch,
+        prefetch=cfg.running_setup.prefetch if cfg.running_setup.prefetch is not None else None,
         storage=storage,
         batch_size=cfg.buffer.batch_size,
         sampler = sampler
