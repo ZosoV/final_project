@@ -6,7 +6,7 @@
 
 num_games = 3
 num_seeds = 3
-num_cores = 36
+num_cores = 32
 num_ram = 4
 num_algorithms = 4
 
