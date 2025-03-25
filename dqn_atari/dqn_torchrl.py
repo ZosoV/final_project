@@ -220,7 +220,7 @@ def main(cfg: "DictConfig"):
             split_trajs=False,
             init_random_frames=warmup_steps,
             cat_results="stack",
-            num_threads = cfg.running_setup.num_threads     
+            num_threads = cfg.running_setup.num_envs 
         )
 
     # Create the replay buffer
