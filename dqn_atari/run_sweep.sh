@@ -9,7 +9,7 @@ ITERATIONS=40
 
 
 # sleep 300  # 5-minute buffer
-CUSTOM_THREADS=8
+CUSTOM_THREADS=12
 
 set -x  # Enable debug mode
 set -e  # Stop script on error
@@ -36,10 +36,7 @@ python dqn_torchrl.py -m \
     run_name=DQN_${GAME_NAME}_$SEED \
     collector.num_iterations=$ITERATIONS \
     running_setup.num_threads=$CUSTOM_THREADS \
-    running_setup.num_envs=1 \
-    running_setup.prefetch=16 \
-    collector.frames_per_batch=400 \
-    loss.num_updates=100
+    running_setup.num_envs=4
 
 # echo "Sleeping for 5 minutes..."
 # sleep 300  # 5-minute buffer

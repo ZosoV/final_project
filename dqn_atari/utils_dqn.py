@@ -71,13 +71,13 @@ def make_env(env_name="Asteroids", frame_stack = 4,
     env = TransformedEnv(env)
 
     # TODO: Add to improve performance by setting the operation with the GPU
+    # env.append_transform(RenameTransform(["pixels"], ["observation"]))
     # env.append_transform(NoopResetEnv(noops=30, random=True))
     # env.append_transform(ToTensorImage(in_keys="observation"))
-    # env.append_transform(PermuteTransform(in_keys="observation", dims=[-1, -3, -2]))
     # env.append_transform(FrameSkipTransform(frame_skip=4))
     # env.append_transform(GrayScale(in_keys="observation"))
     # env.append_transform(Resize(84, 84, in_keys="observation"))
-    # env.append_transform(TimeMaxPool(T=2))
+    # env.append_transform(TimeMaxPool(T=2, in_keys="observation"))
 
     env.append_transform(ToTensorImage(in_keys="observation")) 
     env.append_transform(CatFrames(in_keys="observation",N=frame_stack, dim=-3))

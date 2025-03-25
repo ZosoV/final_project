@@ -5,16 +5,14 @@
 #SBATCH --time=4-00:00:00
 #SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=40
-#SBATCH --mem-per-cpu=8GB
+#SBATCH --cpus-per-task=72
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
 #SBATCH --constraint=sapphire
 
 GAME_NAME=Alien
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=20
-ITERATIONS=201
+CUSTOM_THREADS=36
+ITERATIONS=101
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
