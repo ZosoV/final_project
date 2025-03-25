@@ -2,7 +2,7 @@
 #SBATCH --job-name=bisimulation-rl-DQN-Alien
 #SBATCH --array=1
 #SBATCH --ntasks=1
-#SBATCH --time=5-00:00:00
+#SBATCH --time=10-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
 #SBATCH --cpus-per-task=14
