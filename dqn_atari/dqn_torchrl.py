@@ -496,6 +496,7 @@ def main(cfg: "DictConfig"):
             "train/epsilon": greedy_module.eps.item(),
             "train/average_q_value": torch.gather(data["action_value"], 1, data["action"].unsqueeze(1)).mean().item(),
             "train/average_steps_per_second": average_steps_per_second,
+            "train/iter_time" : training_time,
             "train/avg_iter_time" : avg_iter_time / (iteration + 1),
             "train/average_total_loss": loss["loss"].mean().item(),
             "train/average_td_loss": loss["loss"].mean().item(),
