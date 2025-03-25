@@ -362,6 +362,9 @@ def main(cfg: "DictConfig"):
 
     print("Initial PyTorch Threads: ", torch.get_num_threads())
     print("Init main loop ...")
+
+    avg_iter_time = 0
+
     for iteration in range(start_iteration, cfg.collector.num_iterations + start_iteration):
 
         sum_return = 0
@@ -477,6 +480,7 @@ def main(cfg: "DictConfig"):
 
         training_time = time.time() - training_start
         average_steps_per_second =  num_steps / training_time
+        avg_iter_time += training_time
 
         # TODO: plot distributions of the mico distance in the replay buffer
         #       plot distributions of the td_error in the replay buffer
@@ -492,6 +496,7 @@ def main(cfg: "DictConfig"):
             "train/epsilon": greedy_module.eps.item(),
             "train/average_q_value": torch.gather(data["action_value"], 1, data["action"].unsqueeze(1)).mean().item(),
             "train/average_steps_per_second": average_steps_per_second,
+            "train/avg_iter_time" : avg_iter_time / (iteration + 1),
             "train/average_total_loss": loss["loss"].mean().item(),
             "train/average_td_loss": loss["loss"].mean().item(),
         }
