@@ -2,18 +2,18 @@
 #SBATCH --job-name=bisimulation-rl-DQN_Alien
 #SBATCH --array=0
 #SBATCH --ntasks=1
-#SBATCH --time=4-00:00:00
+#SBATCH --time=10-00:00:00
 #SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=36
 #SBATCH --mem-per-cpu=8GB
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
 #SBATCH --constraint=sapphire
 
 GAME_NAME=Alien
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=16
+CUSTOM_THREADS=27
 ITERATIONS=201
 
 # Temporary scratch space for I/O efficiency
@@ -92,7 +92,7 @@ export MKL_NUM_THREADS=$CUSTOM_THREADS
 
 # Execute based on the selected variant
 if [ "$VARIANT" == "BPER" ]; then
-    python dqn_mnih.py -m \
+    python dqn_torchrl.py -m \
         collector.num_iterations=$ITERATIONS \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
@@ -107,7 +107,7 @@ if [ "$VARIANT" == "BPER" ]; then
     sleep 100  # 5-minute buffer
 
 elif [ "$VARIANT" == "PER" ]; then
-    python dqn_mnih.py -m \
+    python dqn_torchrl.py -m \
         env.seed=$SEED \
         collector.num_iterations=$ITERATIONS \
         env.env_name=$GAME_NAME \
@@ -122,7 +122,7 @@ elif [ "$VARIANT" == "PER" ]; then
     sleep 100  # 5-minute buffer
         
 elif [ "$VARIANT" == "MICO" ]; then
-    python dqn_mnih.py -m \
+    python dqn_torchrl.py -m \
         env.seed=$SEED \
         collector.num_iterations=$ITERATIONS \
         env.env_name=$GAME_NAME \
@@ -135,7 +135,7 @@ elif [ "$VARIANT" == "MICO" ]; then
     sleep 100  # 5-minute buffer
 
 elif [ "$VARIANT" == "DQN" ]; then
-    python dqn_mnih.py -m \
+    python dqn_torchrl.py -m \
         collector.num_iterations=$ITERATIONS \
         env.env_name=$GAME_NAME \
         env.seed=$SEED \
