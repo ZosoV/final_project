@@ -1,15 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN-Alien
-#SBATCH --array=1
+#SBATCH --array=2
 #SBATCH --ntasks=1
 #SBATCH --time=5-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
-#SBATCH --cpus-per-task=28
-#SBATCH --nodes=1
-#SBATCH --mem-per-cpu=8GB
+#SBATCH --cpus-per-task=18
 #SBATCH --account=giacobbm-bisimulation-rl
-#SBATCH --gres=gpu:a30:1
+#SBATCH --gres=gpu:a100:1
 #SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
 
 module purge; module load bluebear
@@ -23,8 +21,8 @@ module load tqdm/4.66.1-GCCcore-12.3.0
 
 GAME_NAME=Alien
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=14
-ITERATIONS=40
+CUSTOM_THREADS=18
+ITERATIONS=101
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -96,7 +94,7 @@ export MKL_NUM_THREADS=$CUSTOM_THREADS
 
 # Execute based on the selected variant
 if [ "$VARIANT" == "BPER" ]; then
-    python dqn_mnih.py -m \
+    python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         collector.num_iterations=$ITERATIONS \
@@ -109,7 +107,7 @@ if [ "$VARIANT" == "BPER" ]; then
     # wandb sync outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "PER" ]; then
-    python dqn_mnih.py -m \
+    python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         collector.num_iterations=$ITERATIONS \
@@ -122,7 +120,7 @@ elif [ "$VARIANT" == "PER" ]; then
     # wandb sync outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "MICO" ]; then
-    python dqn_mnih.py -m \
+    python dqn_torchrl.py -m \
         env.seed=$SEED \
         env.env_name=$GAME_NAME \
         collector.num_iterations=$ITERATIONS \
@@ -133,7 +131,7 @@ elif [ "$VARIANT" == "MICO" ]; then
     # wandb sync outputs/DQN_MICO_${GAME_NAME}_$SEED
 
 elif [ "$VARIANT" == "DQN" ]; then
-    python dqn_mnih.py -m \
+    python dqn_torchrl.py -m \
         env.env_name=$GAME_NAME \
         env.seed=$SEED \
         collector.num_iterations=$ITERATIONS \

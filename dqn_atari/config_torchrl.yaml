@@ -20,7 +20,7 @@ run_name: DQN_atari
 project_name: "atari_benchmark"
 group_name: null
 device: null
-
+debug_mode : True
 
 # logger
 logger:
