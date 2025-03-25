@@ -58,17 +58,17 @@ import gymnasium as gym
 import ale_py
 import os
 
-import argparse
+# import argparse
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--config", type=str, default="config_torchrl")
-args = parser.parse_args()
+# parser = argparse.ArgumentParser()
+# parser.add_argument("--config", type=str, default="config_torchrl")
+# args = parser.parse_args()
 
 
-@hydra.main(config_path=".", config_name=args.config, version_base=None)
+@hydra.main(config_path=".", config_name="config_torchrl", version_base=None)
 def main(cfg: "DictConfig"):
 
-    print("Using config file: ", args.config)
+    # print("Using config file: ", args.config)
 
     # Register the environments
     gym.register_envs(ale_py)
