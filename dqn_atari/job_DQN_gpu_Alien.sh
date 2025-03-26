@@ -5,7 +5,9 @@
 #SBATCH --time=10-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
+#SBATCH --nodes=1
 #SBATCH --cpus-per-task=14
+#SBATCH --mem-per-cpu=8GB
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a30:1
 #SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
@@ -21,7 +23,7 @@ module load tqdm/4.66.1-GCCcore-12.3.0
 
 GAME_NAME=Alien
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=8
+CUSTOM_THREADS=10
 ITERATIONS=201
 
 # Temporary scratch space for I/O efficiency
