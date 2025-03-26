@@ -5,15 +5,13 @@
 #SBATCH --time=10-00:00:00
 #SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=36
-#SBATCH --mem-per-cpu=8GB
+#SBATCH --cpus-per-task=32
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
 #SBATCH --constraint=sapphire
 
 GAME_NAME=AirRaid
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=18
+CUSTOM_THREADS=24
 ITERATIONS=201
 
 # Temporary scratch space for I/O efficiency
