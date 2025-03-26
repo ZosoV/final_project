@@ -13,7 +13,7 @@
 
 GAME_NAME=Asteroids
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=24
+CUSTOM_THREADS=18
 ITERATIONS=201
 
 # Temporary scratch space for I/O efficiency
