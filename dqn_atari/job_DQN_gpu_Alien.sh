@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN-Alien
-#SBATCH --array=1
+#SBATCH --array=0-2
 #SBATCH --ntasks=1
 #SBATCH --time=10-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --qos=bbgpu
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=14
+#SBATCH --cpus-per-task=28
 #SBATCH --mem-per-cpu=8GB
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a30:1
@@ -23,7 +23,7 @@ module load tqdm/4.66.1-GCCcore-12.3.0
 
 GAME_NAME=Alien
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
-CUSTOM_THREADS=10
+CUSTOM_THREADS=14
 ITERATIONS=201
 
 # Temporary scratch space for I/O efficiency

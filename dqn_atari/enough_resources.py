@@ -4,7 +4,7 @@
 
 # Check if my setting fill the requirements
 
-num_games = 2
+num_games = 3
 num_seeds = 3
 num_cores = 36
 num_ram = 8
