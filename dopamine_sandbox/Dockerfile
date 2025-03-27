@@ -28,6 +28,11 @@ RUN cd baselines && pip install -e .
 RUN apt-get update && apt-get install -y libgl1-mesa-glx libglib2.0-0
 RUN pip install ale-py
 
+# Install additional libs
+RUN pip install seaborn
+RUN pip uninstall -y jax jaxlib
+RUN pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+
 # Install Jupyter and other dependencies
 RUN pip install notebook
 
