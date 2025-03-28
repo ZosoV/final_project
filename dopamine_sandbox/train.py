@@ -39,17 +39,17 @@ import metric_implicit_quantile_agent
 import metric_quantile_agent
 import metric_rainbow_agent
 
-import metric_dqn_per_agent
+import metric_dqn_bper_agent as metric_dqn_bper_agent
 
 
-flags.DEFINE_string('base_dir', None,
+flags.DEFINE_string('base_dir', "logs/",
                     'Base directory to host all required sub-directories.')
-flags.DEFINE_string('game_name', None,
+flags.DEFINE_string('game_name', "Alien",
                     'Atari Game basename.')
-flags.DEFINE_string('agent_name', None,
+flags.DEFINE_string('agent_name', "metric_dqn_bper",
                     'Set the agent name.')
 flags.DEFINE_multi_string(
-    'gin_files', [], 'List of paths to gin configuration files.')
+    'gin_files', ["dopamine_sandbox/dqn.gin"], 'List of paths to gin configuration files.')
 flags.DEFINE_multi_string(
     'gin_bindings', [],
     'Gin bindings to override the values set in the config files.')
@@ -103,8 +103,8 @@ def create_metric_agent(sess, environment, agent_name='metric_dqn',
   elif agent_name == 'metric_dqn':
     return metric_dqn_agent.MetricDQNAgent(
         num_actions=environment.action_space.n, summary_writer=summary_writer)
-  elif agent_name == 'metric_dqn_per' or agent_name == 'metric_dqn_per_agent':
-    return metric_dqn_per_agent.MetricDQNBPERAgent(
+  elif agent_name == 'metric_dqn_bper' or agent_name == 'metric_dqn_bper_agent':
+    return metric_dqn_bper_agent.MetricDQNBPERAgent(
         num_actions=environment.action_space.n, summary_writer=summary_writer)
   elif agent_name == 'metric_c51' or agent_name == 'metric_rainbow':
     return metric_rainbow_agent.MetricRainbowAgent(

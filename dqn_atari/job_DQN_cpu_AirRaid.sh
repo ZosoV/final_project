@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN_AirRaid
-#SBATCH --array=0
+#SBATCH --array=1
 #SBATCH --ntasks=1
 #SBATCH --time=10-00:00:00
 #SBATCH --qos=bbdefault

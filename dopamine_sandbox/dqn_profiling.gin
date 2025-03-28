@@ -9,7 +9,7 @@ import metric_dqn_bper_agent
 
 JaxDQNAgent.gamma = 0.99
 JaxDQNAgent.update_horizon = 1
-JaxDQNAgent.min_replay_history = 20_000  # agent steps
+JaxDQNAgent.min_replay_history = 100  # agent steps
 JaxDQNAgent.update_period = 4
 JaxDQNAgent.target_update_period = 8_000  # agent steps
 JaxDQNAgent.epsilon_train = 0.01
@@ -31,8 +31,8 @@ atari_lib.create_atari_environment.game_name = 'Pong'
 atari_lib.create_atari_environment.sticky_actions = True
 create_runner.schedule = 'continuous_train'
 create_metric_agent.debug_mode = True
-Runner.num_iterations = 200
-Runner.training_steps = 250_000  # agent steps
+Runner.num_iterations = 5
+Runner.training_steps = 1_000  # agent steps
 Runner.evaluation_steps = 125_000  # agent steps
 Runner.max_steps_per_episode = 27_000  # agent steps
 

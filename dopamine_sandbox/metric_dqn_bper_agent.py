@@ -66,7 +66,7 @@ class AtariDQNNetwork(nn.Module):
 @functools.partial(jax.jit, static_argnums=(0, 3, 10, 11, 12))
 def train(network_def, online_params, target_params, optimizer, optimizer_state,
           states, actions, next_states, rewards, terminals, cumulative_gamma,
-          mico_weight, distance_fn, loss_weights):
+          mico_weight, distance_fn, loss_weights, bper_weight = 0):
   """Run the training step."""
   def loss_fn(params, bellman_target, target_r, target_next_r, loss_multipliers):
     def q_online(state):
@@ -88,7 +88,19 @@ def train(network_def, online_params, target_params, optimizer, optimizer_state,
                                                        target_dist))
     loss = ((1. - mico_weight) * bellman_loss +
             mico_weight * metric_loss)
-    return jnp.mean(loss), (bellman_loss, metric_loss)
+    
+    # Current vs Next Distance without squarify
+    # NOTE: I could try to use online next representation instead of target_next_r
+    # NOTE: when bper_weight we are using PER and we don't need to compute the experience distance
+    if bper_weight > 0:
+      experience_distances = metric_utils.current_next_distances(
+        current_state_representations=representations,
+        next_state_representations=target_next_r,
+        distance_fn = distance_fn,)
+    else:
+      experience_distances = jnp.zeros_like(loss)
+
+    return jnp.mean(loss), (bellman_loss, metric_loss), experience_distances
 
   def q_target(state):
     return network_def.apply(target_params, state)
@@ -96,12 +108,12 @@ def train(network_def, online_params, target_params, optimizer, optimizer_state,
   grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
   bellman_target, target_r, target_next_r = target_outputs(
       q_target, states, next_states, rewards, terminals, cumulative_gamma)
-  (loss, component_losses), grad = grad_fn(online_params, bellman_target,
+  (loss, component_losses, experience_distances), grad = grad_fn(online_params, bellman_target,
                                            target_r, target_next_r, loss_weights)
   bellman_loss, metric_loss = component_losses
   updates, optimizer_state = optimizer.update(grad, optimizer_state)
   online_params = optax.apply_updates(online_params, updates)
-  return optimizer_state, online_params, loss, bellman_loss, metric_loss
+  return optimizer_state, online_params, loss, bellman_loss, metric_loss, experience_distances
 
 
 def target_outputs(target_network, states, next_states, rewards, terminals,
@@ -132,10 +144,13 @@ class MetricDQNBPERAgent(dqn_agent.JaxDQNAgent):
                summary_writer=None,
                mico_weight=0.01, 
                distance_fn=metric_utils.cosine_distance,
-               replay_scheme='prioritized'):
+               replay_scheme='prioritized',
+               bper_weight=0, # PER: 0 and BPER: 1
+               ):
     self._mico_weight = mico_weight
     self._distance_fn = distance_fn
     self._replay_scheme = replay_scheme
+    self._bper_weight = bper_weight
     
     print("Using replay scheme: ", self._replay_scheme)
 
@@ -191,7 +206,8 @@ class MetricDQNBPERAgent(dqn_agent.JaxDQNAgent):
           loss_weights = jnp.ones(self.replay_elements['state'].shape[0])
 
         (self.optimizer_state, self.online_params,
-         loss, bellman_loss, metric_loss) = train(
+         loss, bellman_loss, metric_loss, 
+         experience_distances ) = train(
              self.network_def,
              self.online_params,
              self.target_network_params,
@@ -205,7 +221,8 @@ class MetricDQNBPERAgent(dqn_agent.JaxDQNAgent):
              self.cumulative_gamma,
              self._mico_weight,
              self._distance_fn,
-             loss_weights)
+             loss_weights,
+             self._bper_weight)
         
         if self._replay_scheme == 'prioritized':
           # Rainbow and prioritized replay are parametrized by an exponent
@@ -216,9 +233,15 @@ class MetricDQNBPERAgent(dqn_agent.JaxDQNAgent):
           # While technically this may be okay, setting all items to 0
           # priority will cause troubles, and also result in 1.0 / 0.0 = NaN
           # correction terms.
+
+          # NOTE: Option we can in the same way as the loss weights, use the sqrt of the
+          # experience distance.
+          # priorities = (1 - self._bper_weight) * jnp.sqrt(loss + 1e-10) + self._bper_weight * jnp.sqrt(experience_distances + 1e-10)
+          priorities = (1 - self._bper_weight) * jnp.sqrt(loss + 1e-10) + self._bper_weight * experience_distances
+
           self._replay.update(
               self.replay_elements['indices'],
-              priorities=jnp.sqrt(loss + 1e-10),
+              priorities=priorities,
           )
 
         if (self.summary_writer is not None and

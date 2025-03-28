@@ -118,3 +118,18 @@ def target_distances(representations, rewards, distance_fn, cumulative_gamma):
   return (
       jax.lax.stop_gradient(
           reward_diffs + cumulative_gamma * next_state_similarities))
+
+@gin.configurable
+def current_next_distances(
+        current_state_representations,
+        next_state_representations,
+        distance_fn,
+        beta=0.1):
+    """Compute distances between current and next state representations."""
+    base_distances = jax.vmap(distance_fn, in_axes=(0, 0))(current_state_representations,
+                                                           next_state_representations)
+
+    norm_average = 0.5 * (jnp.sum(jnp.square(current_state_representations), -1) +
+                          jnp.sum(jnp.square(next_state_representations), -1))
+
+    return norm_average + beta * base_distances
