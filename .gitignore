@@ -24,6 +24,7 @@ dqn_atari/torch-rl-gpu.sif
 dqn_atari/torch-rl-redhat-gpu.sif
 dqn_atari/job_script_ignore.sh
 dopamine_sandbox/baselines/
+logs/
 
 # Distribution / packaging
 .Python
