@@ -30,6 +30,9 @@ import tensorflow as tf
 # from mico.atari import metric_utils
 import metric_utils
 
+from absl import logging
+
+
 NetworkType = collections.namedtuple('network', ['q_values', 'representation'])
 
 
@@ -130,6 +133,28 @@ class MetricDQNAgent(dqn_agent.JaxDQNAgent):
     network = AtariDQNNetwork
     super().__init__(num_actions, network=network,
                      summary_writer=summary_writer)
+    
+    logging.info(
+        'Creating %s agent with the following parameters:',
+        self.__class__.__name__,
+    )
+    logging.info('\t mico_weight: %f', self._mico_weight)
+    logging.info('\t distance_fn: %s', self._distance_fn)
+    logging.info('\t replay_scheme: %s', self._replay_scheme)
+    logging.info('\t gamma: %f', self.gamma)
+    logging.info('\t update_horizon: %f', self.update_horizon)
+    logging.info('\t min_replay_history: %d', self.min_replay_history)
+    logging.info('\t update_period: %d', self.update_period)
+    logging.info('\t target_update_period: %d', self.target_update_period)
+    logging.info('\t epsilon_train: %f', self.epsilon_train)
+    logging.info('\t epsilon_eval: %f', self.epsilon_eval)
+    logging.info('\t epsilon_decay_period: %d', self.epsilon_decay_period)
+    logging.info('\t optimizer: %s', self.optimizer)
+    logging.info('\t seed: %d', self._seed)
+    logging.info('\t loss_type: %s', self._loss_type)
+    logging.info('\t preprocess_fn: %s', self.preprocess_fn)
+    logging.info('\t summary_writing_frequency: %d', self.summary_writing_frequency)
+    logging.info('\t allow_partial_reload: %s', self.allow_partial_reload)
 
   def _train_step(self):
     """Runs a single training step."""

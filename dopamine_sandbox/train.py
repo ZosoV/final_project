@@ -48,6 +48,8 @@ flags.DEFINE_string('game_name', "Alien",
                     'Atari Game basename.')
 flags.DEFINE_string('agent_name', "metric_dqn_bper",
                     'Set the agent name.')
+flags.DEFINE_string('seed', "0",
+                    'Random seed to use for the experiment.')
 flags.DEFINE_multi_string(
     'gin_files', ["dqn_profiling.gin"], 'List of paths to gin configuration files.')
 flags.DEFINE_multi_string(
@@ -103,7 +105,7 @@ def create_metric_agent(sess, environment, agent_name='metric_dqn',
   elif agent_name == 'metric_dqn':
     return metric_dqn_agent.MetricDQNAgent(
         num_actions=environment.action_space.n, summary_writer=summary_writer)
-  elif agent_name == 'metric_dqn_bper' or agent_name == 'metric_dqn_bper_agent':
+  elif agent_name == 'metric_dqn_bper' or agent_name == 'metric_dqn_per':
     return metric_dqn_bper_agent.MetricDQNBPERAgent(
         num_actions=environment.action_space.n, summary_writer=summary_writer)
   elif agent_name == 'metric_c51' or agent_name == 'metric_rainbow':
@@ -139,12 +141,13 @@ def main(unused_argv):
 
   addition_bindings = [
     f"atari_lib.create_atari_environment.game_name='{FLAGS.game_name}'",
-    f"create_metric_agent.agent_name='{FLAGS.agent_name}'"
+    f"create_metric_agent.agent_name='{FLAGS.agent_name}'",
+    f"JaxDQNAgent.seed={FLAGS.seed}",
   ]
   run_experiment.load_gin_configs(gin_files, gin_bindings + addition_bindings)
   
 
-  LOG_PATH = os.path.join(base_dir, FLAGS.agent_name, FLAGS.game_name)
+  LOG_PATH = os.path.join(base_dir, FLAGS.agent_name, FLAGS.game_name, FLAGS.seed)
   print(f"LOG_PATH: {LOG_PATH}")
   runner = run_experiment.TrainRunner(LOG_PATH, create_metric_agent)
   runner.run_experiment()

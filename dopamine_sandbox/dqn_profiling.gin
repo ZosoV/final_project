@@ -33,7 +33,7 @@ create_runner.schedule = 'continuous_train'
 create_metric_agent.debug_mode = True
 Runner.num_iterations = 5
 Runner.training_steps = 1_000  # agent steps
-Runner.evaluation_steps = 125_000  # agent steps
+Runner.evaluation_steps = 1_000  # agent steps
 Runner.max_steps_per_episode = 27_000  # agent steps
 
 ReplayBuffer.max_capacity = 1_000_000

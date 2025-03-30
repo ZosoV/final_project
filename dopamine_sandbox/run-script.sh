@@ -30,10 +30,43 @@ set -x
 
 # pip install -r mico/requirements.txt
 GAME_NAME='Alien'
-AGENT_NAME='metric_dqn_bper'
+AGENT_NAME=${AGENT_NAME:-metric_dqn_bper}  # Default to metric_dqn_bper if no agent name is specified
 
-python -m train \
-    --base_dir=logs/ \
-    --gin_files=dqn.gin \
-    --game_name=${GAME_NAME} \
-    --agent_name=${AGENT_NAME}
+seeds=(118398 919409 711872 442081 189061)
+SLURM_ARRAY_TASK_ID=0
+
+# Select the seed based on the SLURM array task ID
+SEED=${seeds[$SLURM_ARRAY_TASK_ID]}
+
+# Execute based on the selected variant
+if [ "$AGENT_NAME" == "metric_dqn_bper" ]; then
+
+    python -m train \
+        --base_dir=logs/ \
+        --gin_files=dqn.gin \
+        --game_name=${GAME_NAME} \
+        --agent_name=${AGENT_NAME} \
+        --seed=${SEED}
+
+elif [ "$AGENT_NAME" == "metric_dqn_per" ]; then
+    python -m train \
+        --base_dir=logs/ \
+        --gin_files=dqn.gin \
+        --game_name=${GAME_NAME} \
+        --agent_name=${AGENT_NAME} \
+        --seed=${SEED} \
+        --gin_bindings="MetricDQNBPERAgent.bper_weight=0"
+
+
+elif [ "$AGENT_NAME" == "metric_dqn" ]; then
+    python -m train \
+        --base_dir=logs/ \
+        --gin_files=dqn.gin \
+        --game_name=${GAME_NAME} \
+        --agent_name=${AGENT_NAME} \
+        --seed=${SEED}
+    
+else
+    echo "Unknown variant: $AGENT_NAME"
+    exit 1
+fi
