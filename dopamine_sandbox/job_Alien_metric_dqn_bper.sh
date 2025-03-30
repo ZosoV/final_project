@@ -4,6 +4,7 @@
 #SBATCH --ntasks=1
 #SBATCH --time=5-00:00:00
 #SBATCH --mail-type=ALL
+#SBATCH --qos=bbgpu
 #SBATCH --cpus-per-task=14
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a30:1
