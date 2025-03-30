@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=bisimulation-rl-DQN-Alien
-#SBATCH --array=0-2
+#SBATCH --array=0
 #SBATCH --ntasks=1
-#SBATCH --time=10-00:00:00
+#SBATCH --time=5-00:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --cpus-per-task=14
 #SBATCH --account=giacobbm-bisimulation-rl
