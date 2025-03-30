@@ -63,7 +63,7 @@ class AtariDQNNetwork(nn.Module):
     return NetworkType(q_values, representation)
 
 
-@functools.partial(jax.jit, static_argnums=(0, 3, 10, 11, 12))
+@functools.partial(jax.jit, static_argnums=(0, 3, 10, 11, 12, 14))
 def train(network_def, online_params, target_params, optimizer, optimizer_state,
           states, actions, next_states, rewards, terminals, cumulative_gamma,
           mico_weight, distance_fn, loss_weights, bper_weight = 0):
@@ -78,8 +78,9 @@ def train(network_def, online_params, target_params, optimizer, optimizer_state,
     representations = model_output.representation
     representations = jnp.squeeze(representations)
     replay_chosen_q = jax.vmap(lambda x, y: x[y])(q_values, actions)
-    bellman_loss = jnp.mean(loss_multipliers * jax.vmap(losses.mse_loss)(bellman_target,
-                                                      replay_chosen_q))
+    batch_bellman_loss = jax.vmap(losses.mse_loss)(bellman_target,
+                                                      replay_chosen_q)
+    bellman_loss = jnp.mean(loss_multipliers * batch_bellman_loss)
     online_dist = metric_utils.representation_distances(
         representations, target_r, distance_fn)
     target_dist = metric_utils.target_distances(
@@ -98,9 +99,9 @@ def train(network_def, online_params, target_params, optimizer, optimizer_state,
         next_state_representations=target_next_r,
         distance_fn = distance_fn,)
     else:
-      experience_distances = jnp.zeros_like(loss)
+      experience_distances = jnp.zeros_like(batch_bellman_loss)
 
-    return jnp.mean(loss), (bellman_loss, metric_loss), experience_distances
+    return jnp.mean(loss), (bellman_loss, metric_loss, batch_bellman_loss, experience_distances)
 
   def q_target(state):
     return network_def.apply(target_params, state)
@@ -108,12 +109,12 @@ def train(network_def, online_params, target_params, optimizer, optimizer_state,
   grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
   bellman_target, target_r, target_next_r = target_outputs(
       q_target, states, next_states, rewards, terminals, cumulative_gamma)
-  (loss, component_losses, experience_distances), grad = grad_fn(online_params, bellman_target,
+  (loss, component_losses), grad = grad_fn(online_params, bellman_target,
                                            target_r, target_next_r, loss_weights)
-  bellman_loss, metric_loss = component_losses
+  bellman_loss, metric_loss, batch_bellman_loss, experience_distances = component_losses
   updates, optimizer_state = optimizer.update(grad, optimizer_state)
   online_params = optax.apply_updates(online_params, updates)
-  return optimizer_state, online_params, loss, bellman_loss, metric_loss, experience_distances
+  return optimizer_state, online_params, loss, bellman_loss, metric_loss, batch_bellman_loss, experience_distances
 
 
 def target_outputs(target_network, states, next_states, rewards, terminals,
@@ -144,19 +145,23 @@ class MetricDQNBPERAgent(dqn_agent.JaxDQNAgent):
                summary_writer=None,
                mico_weight=0.01, 
                distance_fn=metric_utils.cosine_distance,
-               replay_scheme='prioritized',
+               replay_scheme='uniform',
                bper_weight=0, # PER: 0 and BPER: 1
                ):
     self._mico_weight = mico_weight
     self._distance_fn = distance_fn
-    self._replay_scheme = replay_scheme
-    self._bper_weight = bper_weight
     
-    print("Using replay scheme: ", self._replay_scheme)
-
     network = AtariDQNNetwork
     super().__init__(num_actions, network=network,
                      summary_writer=summary_writer)
+    
+    self._replay_scheme = replay_scheme
+    self._bper_weight = bper_weight
+    # NOTE: As I create a function that only create the prioritized replay
+    # I don't need to call it again here. It is is called above with the super
+    # that calls the original DQN agent
+    # self._replay = self._build_replay_buffer() 
+    print("Using replay scheme: ", self._replay_scheme)
     
   def _build_replay_buffer(self):
     """Creates the replay buffer used by the agent."""
@@ -169,14 +174,9 @@ class MetricDQNBPERAgent(dqn_agent.JaxDQNAgent):
         gamma=self.gamma,
     )
 
-    if self._replay_scheme == 'uniform':
-        sampling_distribution = samplers.UniformSamplingDistribution(
-        seed=self._seed
-        )
-    else:
-        sampling_distribution = samplers.PrioritizedSamplingDistribution(
+    sampling_distribution = samplers.PrioritizedSamplingDistribution(
             seed=self._seed
-        )
+       )
     return replay_buffer.ReplayBuffer(
         transition_accumulator=transition_accumulator,
         sampling_distribution=sampling_distribution,
@@ -207,7 +207,7 @@ class MetricDQNBPERAgent(dqn_agent.JaxDQNAgent):
 
         (self.optimizer_state, self.online_params,
          loss, bellman_loss, metric_loss, 
-         experience_distances ) = train(
+         batch_bellman_loss, experience_distances) = train(
              self.network_def,
              self.online_params,
              self.target_network_params,
@@ -237,7 +237,7 @@ class MetricDQNBPERAgent(dqn_agent.JaxDQNAgent):
           # NOTE: Option we can in the same way as the loss weights, use the sqrt of the
           # experience distance.
           # priorities = (1 - self._bper_weight) * jnp.sqrt(loss + 1e-10) + self._bper_weight * jnp.sqrt(experience_distances + 1e-10)
-          priorities = (1 - self._bper_weight) * jnp.sqrt(loss + 1e-10) + self._bper_weight * experience_distances
+          priorities = (1 - self._bper_weight) * jnp.sqrt(batch_bellman_loss + 1e-10) + self._bper_weight * experience_distances
 
           self._replay.update(
               self.replay_elements['indices'],

@@ -29,6 +29,7 @@ logger:
   save_checkpoint_freq: 50
   load_checkpoint: False
   load_checkpoint_path: null
+  summary_writing_frequency: 500 # TODO: implement this functionality
   evaluation:
     enable: False
     eval_freq: 1000

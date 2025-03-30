@@ -30,10 +30,9 @@ set -x
 
 # pip install -r mico/requirements.txt
 GAME_NAME='Alien'
-AGENT_NAME='metric_dqn_per'
-docker run -it --rm --gpus all \
-    -v "$(pwd)":/workspace dopamine-gpu \ 
-    python -m train \
+AGENT_NAME='metric_dqn_bper'
+
+python -m train \
     --base_dir=logs/ \
     --gin_files=dqn.gin \
     --game_name=${GAME_NAME} \

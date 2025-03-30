@@ -39,7 +39,7 @@ import metric_implicit_quantile_agent
 import metric_quantile_agent
 import metric_rainbow_agent
 
-import metric_dqn_bper_agent as metric_dqn_bper_agent
+import metric_dqn_bper_agent
 
 
 flags.DEFINE_string('base_dir', "logs/",
@@ -49,7 +49,7 @@ flags.DEFINE_string('game_name', "Alien",
 flags.DEFINE_string('agent_name', "metric_dqn_bper",
                     'Set the agent name.')
 flags.DEFINE_multi_string(
-    'gin_files', ["dopamine_sandbox/dqn.gin"], 'List of paths to gin configuration files.')
+    'gin_files', ["dqn_profiling.gin"], 'List of paths to gin configuration files.')
 flags.DEFINE_multi_string(
     'gin_bindings', [],
     'Gin bindings to override the values set in the config files.')
