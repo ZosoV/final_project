@@ -30,10 +30,9 @@ atari_lib.create_atari_environment.game_name = 'Pong'
 # Sticky actions with probability 0.25, as suggested by (Machado et al., 2017).
 atari_lib.create_atari_environment.sticky_actions = True
 create_runner.schedule = 'continuous_train'
-create_metric_agent.debug_mode = True
+create_metric_agent.debug_mode = False
 Runner.num_iterations = 100
 Runner.training_steps = 250_000  # agent steps
-Runner.evaluation_steps = 125_000  # agent steps
 Runner.max_steps_per_episode = 27_000  # agent steps
 
 ReplayBuffer.max_capacity = 1_000_000

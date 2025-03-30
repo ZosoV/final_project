@@ -4,10 +4,7 @@
 #SBATCH --ntasks=1
 #SBATCH --time=10-00:00:00
 #SBATCH --mail-type=ALL
-#SBATCH --qos=bbgpu
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=28
-#SBATCH --mem-per-cpu=8GB
+#SBATCH --cpus-per-task=14
 #SBATCH --account=giacobbm-bisimulation-rl
 #SBATCH --gres=gpu:a30:1
 #SBATCH --output="outputs/slurm-files/slurm-DQN-%A_%a.out"
@@ -71,18 +68,54 @@ PIP_CACHE_DIR="/scratch/${USER}/pip"
 # module is already installed in the virtual environment it won't be modified.
 pip install dopamine-rl
 cd baselines && pip install -e .
+cd ..
 pip install ale-py
 pip install seaborn
 pip uninstall -y jax jaxlib
 pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-
 
 seeds=(118398 919409 711872 442081 189061)
 
 # Select the seed based on the SLURM array task ID
 SEED=${seeds[$SLURM_ARRAY_TASK_ID]}
 
+# Record the start time
+start_time=$(date +%s)
 echo "Starting task with seed $SEED at $(date)"
+
+# Define a function to be executed on exit
+function notify_job_completion {
+    exit_status=$?
+    end_time=$(date +%s)
+    runtime=$((end_time - start_time))
+    days=$((runtime / 86400))
+    hours=$(( (runtime % 86400) / 3600 ))
+    minutes=$(( (runtime % 3600) / 60 ))
+
+    slurm_output_file="outputs/slurm-files/slurm-DQN-${SLURM_JOBID}_${SLURM_ARRAY_TASK_ID}.out"
+
+    subject="SLURM Job: ${AGENT_NAME} on ${GAME_NAME} (Seed: ${SEED})"
+    if [ $exit_status -ne 0 ]; then
+        subject="${subject} [FAILED]"
+    else
+        subject="${subject} [COMPLETED]"
+    fi
+
+    {
+        echo "Task finished at $(date)"
+        echo "Exit status: $exit_status"
+        echo "Seed: $SEED"
+        echo "Game: $GAME_NAME"
+        echo "Agent: $AGENT_NAME"
+        echo "Total runtime: ${days} days, ${hours} hours, ${minutes} minutes"
+        echo ""
+        echo "SLURM Output (${slurm_output_file}):"
+        cat "$slurm_output_file"
+    } | mail -s "$subject" o.v.guarnizocabezas@bham.ac.uk
+}
+
+# Trap both EXIT and ERR signals
+trap notify_job_completion EXIT
 
 # Print current OMP_NUM_THREADS and MKL_NUM_THREADS
 echo "OMP_NUM_THREADS=$OMP_NUM_THREADS"
@@ -122,13 +155,11 @@ elif [ "$AGENT_NAME" == "metric_dqn" ]; then
     
 else
     echo "Unknown variant: $AGENT_NAME"
+    echo "Task with seed: $SEED, game: $GAME_NAME and agent: $AGENT_NAME has failed at $(date)" | mail -s "SLURM Job Notification: Task Failed" o.v.guarnizocabezas@bham.ac.uk
     exit 1
 fi
 
-
-
 echo "Completed task with seed $SEED at $(date)"
-
 
 # Cleanup
 # sleep 300  # 5-minute buffer
