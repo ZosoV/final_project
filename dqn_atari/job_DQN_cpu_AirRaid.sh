@@ -103,8 +103,6 @@ if [ "$VARIANT" == "BPER" ]; then
         running_setup.num_threads=$CUSTOM_THREADS #\
         # running_setup.enable_lazy_tensor_buffer=True
 
-    # wandb sync --sync-all --no-include-synced outputs/DQN_MICO_BPER_${GAME_NAME}_$SEED
-    sleep 100  # 5-minute buffer
 
 elif [ "$VARIANT" == "PER" ]; then
     python dqn_torchrl.py -m \
@@ -115,11 +113,8 @@ elif [ "$VARIANT" == "PER" ]; then
         buffer.prioritized_replay.enable=True \
         buffer.prioritized_replay.priority_type=PER \
         run_name=DQN_MICO_PER_${GAME_NAME}_${SEED}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} \
-        running_setup.num_threads=$CUSTOM_THREADS #\
-        # running_setup.enable_lazy_tensor_buffer=True
+        running_setup.num_threads=$CUSTOM_THREADS
 
-    # wandb sync --sync-all --no-include-synced outputs/DQN_MICO_PER_${GAME_NAME}_$SEED
-    sleep 100  # 5-minute buffer
         
 elif [ "$VARIANT" == "MICO" ]; then
     python dqn_torchrl.py -m \
@@ -128,11 +123,8 @@ elif [ "$VARIANT" == "MICO" ]; then
         env.env_name=$GAME_NAME \
         loss.mico_loss.enable=True \
         run_name=DQN_MICO_${GAME_NAME}_${SEED}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} \
-        running_setup.num_threads=$CUSTOM_THREADS #\
-        # running_setup.enable_lazy_tensor_buffer=True
+        running_setup.num_threads=$CUSTOM_THREADS
 
-    # wandb sync --sync-all --no-include-synced outputs/DQN_MICO_${GAME_NAME}_$SEED
-    sleep 100  # 5-minute buffer
 
 elif [ "$VARIANT" == "DQN" ]; then
     python dqn_torchrl.py -m \
