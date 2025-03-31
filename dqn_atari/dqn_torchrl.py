@@ -112,7 +112,6 @@ def main(cfg: "DictConfig"):
     current_date = datetime.datetime.now()
     date_str = current_date.strftime("%Y_%m_%d-%H_%M_%S")  # Includes date and time
     run_name = f"{cfg.run_name}_{date_str}"
-    summary_writing_frequency = cfg.logger.summary_writing_frequency
 
     # Initialize W&B run with config
     hyperparameters = {
@@ -289,6 +288,7 @@ def main(cfg: "DictConfig"):
             delay_value=True, # delay_value=True means we will use a target network
         )
     
+    # loss_module.set_keys(done="end-of-life", terminated="end-of-life")
     loss_module.make_value_estimator(gamma=cfg.loss.gamma) # only to change the gamma value
     loss_module = loss_module.to(device) # NOTE: check if need adding
     
@@ -364,11 +364,11 @@ def main(cfg: "DictConfig"):
     print("Initial PyTorch Threads: ", torch.get_num_threads())
     print("Init main loop ...")
 
-    # avg_iter_time = 0
+    avg_iter_time = 0
 
     for iteration in range(start_iteration, cfg.collector.num_iterations + start_iteration):
 
-        sum_return = 0.0
+        sum_return = 0
         number_of_episodes = 0
         num_steps = 0
 
@@ -382,9 +382,8 @@ def main(cfg: "DictConfig"):
                 bar_format="{l_bar}{r_bar}"
             )
         
-        # training_start = time.time()
-        
-        iter_steps = 0
+        training_start = time.time()
+                
         for i in range(steps_in_batch):
             data = next(c_iter)
 
@@ -394,7 +393,6 @@ def main(cfg: "DictConfig"):
             # NOTE: This reshape must be for frame data (maybe)
             data = data.reshape(-1)
             steps_so_far += current_env_step
-            iter_steps += current_env_step
             
             greedy_module.step(current_env_step)  # 4 is the skip frame
 
@@ -425,8 +423,7 @@ def main(cfg: "DictConfig"):
             episode_rewards = data["next", "episode_reward"][data["next", "done"]]
             # When there are at least one done trajectory in the data batch
             if len(episode_rewards) > 0:
-                # Check that I'm only using one episode
-                assert len(episode_rewards) == 1
+                # assert len(episode_rewards) == len(data["next", "done"])
                 sum_return += episode_rewards.sum().item()
                 number_of_episodes += len(episode_rewards)
 
@@ -480,56 +477,50 @@ def main(cfg: "DictConfig"):
             # NOTE: Updates the policy weights if the policy of the data 
             # collector and the trained policy live on different devices.
             collector.update_policy_weights_()
-
-            if iter_steps > 0 and iter_steps % summary_writing_frequency == 0:
-
-                # training_time = time.time() - training_start
-                # average_steps_per_second =  num_steps / training_time
-                # avg_iter_time += training_time
+        
 
 
-                # if steps_so_far >= warmup_steps:
-                info2flush = {
-                    "train/epsilon": greedy_module.eps.item(),
-                    "train/average_q_value": torch.gather(data["action_value"], 1, data["action"].unsqueeze(1)).mean().item(),
-                    # "train/average_steps_per_second": average_steps_per_second,
-                    # "train/iter_time" : training_time,
-                    # "train/avg_iter_time" : avg_iter_time / (iteration + 1),
-                    "train/average_total_loss": loss["loss"].mean().item(),
-                    "train/average_td_loss": loss["loss"].mean().item(),
-                }
-                
-                if enable_mico:
-                    info2flush.update({
-                        "train/average_mico_loss": loss["mico_loss"].mean().item(),
-                        "train/average_td_loss": loss["td_loss"].mean().item(),
-                    })
-            
-                if number_of_episodes > 0:
-                    total_episodes += number_of_episodes
-                    info2flush["train/average_return"] = sum_return / number_of_episodes
-                    info2flush["train/average_score"] = sum_score / number_of_episodes
-                    info2flush["train/average_episode_length"] = num_steps / number_of_episodes
+        training_time = time.time() - training_start
+        average_steps_per_second =  num_steps / training_time
+        avg_iter_time += training_time
 
-                # Flush the information to wandb
-                # NOTE: We must flush the information by multiplying the step by 4 because
-                # the skip frame is 4 in the environment. Then the collected frames are 4 times
-                # print("Average Score: ", sum_score / number_of_episodes)
-                wandb.log(info2flush, step=steps_so_far * 4)
+        # TODO: plot distributions of the mico distance in the replay buffer
+        #       plot distributions of the td_error in the replay buffer
+        # if cfg.logger.save_distributions:
+        #     logger.log_info.update(
+        #             {
+        #                 "train/buffer_mico_distance_dist": wandb.Histogram(replay_buffer["mico_distance_metadata"].detach()),
+        #             }
+        #         )
 
-                # Set values to default values
-                sum_return = 0
-                number_of_episodes = 0
-                num_steps = 0
-                sum_score = 0
-            
+        # if steps_so_far >= warmup_steps:
+        info2flush = {
+            "train/epsilon": greedy_module.eps.item(),
+            "train/average_q_value": torch.gather(data["action_value"], 1, data["action"].unsqueeze(1)).mean().item(),
+            "train/average_steps_per_second": average_steps_per_second,
+            "train/iter_time" : training_time,
+            "train/avg_iter_time" : avg_iter_time / (iteration + 1),
+            "train/average_total_loss": loss["loss"].mean().item(),
+            "train/average_td_loss": loss["loss"].mean().item(),
+        }
+        if enable_mico:
+            info2flush.update({
+                "train/average_mico_loss": loss["mico_loss"].mean().item(),
+                "train/average_td_loss": loss["td_loss"].mean().item(),
+            })
+        
+        if number_of_episodes > 0:
+            total_episodes += number_of_episodes
+            info2flush["train/average_return"] = sum_return / number_of_episodes
+            info2flush["train/average_score"] = sum_score / number_of_episodes
+            info2flush["train/average_episode_length"] = num_steps / number_of_episodes
 
         # Evaluation
-        # if enable_evaluation:
-        #     if (iteration + 1) % eval_freq == 0:
-        #         test_reward, accuracy = eval_model(model, test_env, iteration)
-        #         info2flush["eval/average_return"] = test_reward
-        #         info2flush["eval/accuracy"] = accuracy
+        if enable_evaluation:
+            if (iteration + 1) % eval_freq == 0:
+                test_reward, accuracy = eval_model(model, test_env, iteration)
+                info2flush["eval/average_return"] = test_reward
+                info2flush["eval/accuracy"] = accuracy
 
 
         if cfg.logger.save_checkpoint:
@@ -552,7 +543,11 @@ def main(cfg: "DictConfig"):
                 }
                 torch.save(checkpoint, f"{path}/{cfg.run_name}_checkpoint_{iteration}.pth")
 
-
+        # Flush the information to wandb
+        # NOTE: We must flush the information by multiplying the step by 4 because
+        # the skip frame is 4 in the environment. Then the collected frames are 4 times
+        # print("Average Score: ", sum_score / number_of_episodes)
+        wandb.log(info2flush, step=steps_so_far * 4)
 
     collector.shutdown()
     end_time = time.time()

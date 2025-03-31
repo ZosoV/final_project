@@ -61,7 +61,9 @@ def make_env(env_name="Asteroids", frame_stack = 4,
             )
     # Apply AtariPreprocessing following the Machado et al. (2017) paper
     env = AtariPreprocessing(env,
-                            grayscale_newaxis=True)
+                            grayscale_newaxis=True,
+                            terminal_on_life_loss=True # Dopamine set this to true
+                            )
 
     env = GymWrapper(env,
                     pixels_only=False, 
@@ -79,6 +81,7 @@ def make_env(env_name="Asteroids", frame_stack = 4,
     # env.append_transform(Resize(84, 84, in_keys="observation"))
     # env.append_transform(TimeMaxPool(T=2, in_keys="observation"))
 
+    # env.append_transform(EndOfLifeTransform())
     env.append_transform(ToTensorImage(in_keys="observation")) 
     env.append_transform(CatFrames(in_keys="observation",N=frame_stack, dim=-3))
     env.append_transform(RenameTransform(["reward"], ["score"]))

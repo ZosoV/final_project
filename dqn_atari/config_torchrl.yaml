@@ -37,7 +37,7 @@ logger:
 # Environment
 # SEEDS: [118398, 676190, 786456, 171936, 887739, 919409, 711872, 442081, 189061, 117840]
 env:
-  env_name: Alien # Asteroids
+  env_name: Asteroids # Asteroids
   seed: 118398
 
 # collector
@@ -113,7 +113,7 @@ loss:
 
 # Currently set for GPU
 running_setup:
-  num_envs: 1
+  num_envs: 4 
   prefetch: null
   enable_lazy_tensor_buffer : False # True for cpu
   device_steps: "cpu"
