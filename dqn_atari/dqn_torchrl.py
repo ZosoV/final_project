@@ -368,7 +368,7 @@ def main(cfg: "DictConfig"):
 
     for iteration in range(start_iteration, cfg.collector.num_iterations + start_iteration):
 
-        sum_return = 0
+        sum_return = 0.0
         number_of_episodes = 0
         num_steps = 0
 
@@ -425,6 +425,8 @@ def main(cfg: "DictConfig"):
             episode_rewards = data["next", "episode_reward"][data["next", "done"]]
             # When there are at least one done trajectory in the data batch
             if len(episode_rewards) > 0:
+                # Check that I'm only using one episode
+                assert len(episode_rewards) == 1
                 sum_return += episode_rewards.sum().item()
                 number_of_episodes += len(episode_rewards)
 
