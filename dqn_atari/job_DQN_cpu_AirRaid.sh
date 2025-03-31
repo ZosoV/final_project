@@ -14,7 +14,7 @@
 GAME_NAME=AirRaid
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
 CUSTOM_THREADS=18
-ITERATIONS=201
+ITERATIONS=100
 
 # Temporary scratch space for I/O efficiency
 BB_WORKDIR=$(mktemp -d /scratch/${USER}_${SLURM_JOBID}.XXXXXX)
@@ -100,9 +100,7 @@ if [ "$VARIANT" == "BPER" ]; then
         buffer.prioritized_replay.enable=True \
         buffer.prioritized_replay.priority_type=BPERcn \
         run_name=DQN_MICO_BPER_${GAME_NAME}_${SEED}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} \
-        running_setup.num_threads=$CUSTOM_THREADS #\
-        # running_setup.enable_lazy_tensor_buffer=True
-
+        running_setup.num_threads=$CUSTOM_THREADS
 
 elif [ "$VARIANT" == "PER" ]; then
     python dqn_torchrl.py -m \
