@@ -2,14 +2,14 @@
 #SBATCH --job-name=bisimulation-rl-DQN_AirRaid
 #SBATCH --array=1
 #SBATCH --ntasks=1
-#SBATCH --time=10-00:00:00
+#SBATCH --time=4-00:00:00
 #SBATCH --qos=bbdefault
 #SBATCH --mail-type=ALL
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=36
 #SBATCH --mem-per-cpu=8GB
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
-#SBATCH --constraint=emerald
+#SBATCH --constraint=sapphire
 
 GAME_NAME=AirRaid
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified
