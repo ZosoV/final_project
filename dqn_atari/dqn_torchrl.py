@@ -288,7 +288,7 @@ def main(cfg: "DictConfig"):
             delay_value=True, # delay_value=True means we will use a target network
         )
     
-    # loss_module.set_keys(done="end-of-life", terminated="end-of-life")
+    loss_module.set_keys(done="end-of-life", terminated="end-of-life")
     loss_module.make_value_estimator(gamma=cfg.loss.gamma) # only to change the gamma value
     loss_module = loss_module.to(device) # NOTE: check if need adding
     
