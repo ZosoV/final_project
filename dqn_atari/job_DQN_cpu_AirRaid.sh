@@ -9,7 +9,7 @@
 #SBATCH --cpus-per-task=36
 #SBATCH --mem-per-cpu=8GB
 #SBATCH --output="outputs/slurm-files/slurm-DQN-cpu-%A_%a.out"
-#SBATCH --constraint=sapphire
+#SBATCH --constraint=emerald
 
 GAME_NAME=AirRaid
 VARIANT=${VARIANT:-DQN}  # Default to DQN if no variant is specified

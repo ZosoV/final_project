@@ -62,7 +62,7 @@ def make_env(env_name="Asteroids", frame_stack = 4,
     # Apply AtariPreprocessing following the Machado et al. (2017) paper
     env = AtariPreprocessing(env,
                             grayscale_newaxis=True,
-                            terminal_on_life_loss=True # Dopamine set this to true
+                            # terminal_on_life_loss=True # Dopamine set this to true
                             )
 
     env = GymWrapper(env,
